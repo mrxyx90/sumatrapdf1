@@ -237,8 +237,8 @@ static void InitButtons(SelectionToolbar* tb, MainWindow* win) {
 }
 
 constexpr int kBtnPadX = 8; // horizontal padding inside a button
-constexpr int kBtnPadY = 2; // vertical padding inside a button
-constexpr int kMargin = 3;  // margin around the row of buttons
+constexpr int kBtnPadY = 4; // vertical padding inside a button
+constexpr int kMargin = 5;  // margin around the row of buttons
 constexpr int kBtnGap = 2;  // gap between buttons
 constexpr int kCornerRadius = 10;
 constexpr int kButtonRadius = 6;

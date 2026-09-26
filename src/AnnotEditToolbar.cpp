@@ -57,8 +57,8 @@ extern "C" {
 constexpr const WCHAR* kAnnotEditToolbarClassName = L"SumatraAnnotEditToolbar";
 
 constexpr int kBtnPadX = 8;
-constexpr int kBtnPadY = 2;
-constexpr int kMargin = 3;
+constexpr int kBtnPadY = 4;
+constexpr int kMargin = 5;
 constexpr int kBtnGap = 2;
 // breathing room above and below the Accept / Cancel row of the contents editor
 constexpr int kContentsButtonsRowPad = 4;
