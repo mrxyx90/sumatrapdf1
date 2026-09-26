@@ -2485,6 +2485,8 @@ static void FinishPendingDocumentRelayout(MainWindow* win) {
 // isNewWindow : if true then 'win' refers to a newly created window that needs
 //   to be resized and placed
 static void SetTabLoadError(WindowTab* tab, Str path);
+static void PrepareStartupWindowRegion(MainWindow* win);
+static bool ResetMaximizedWindowRegion(HWND hwnd);
 
 // placeWindow : if true then the Window will be moved/sized according
 //   to the 'state' information even if the window was already placed
@@ -2808,6 +2810,9 @@ static void ReplaceDocumentInCurrentTab(LoadArgs* args, DocController* ctrl, Fil
             HwndMoveWindow(win->hwndFrame, &rect);
         }
         if (args->showWin) {
+            if (showType == SW_MAXIMIZE && !showAsFullScreen && !HwndIsVisible(win->hwndFrame)) {
+                PrepareStartupWindowRegion(win);
+            }
             ShowWindow(win->hwndFrame, showType);
             if (IsRunningOnWine()) {
                 Rect wr = HwndWindowRect(win->hwndFrame);
@@ -3516,6 +3521,15 @@ static MainWindow* CreateMainWindow(bool restoringSession) {
     return win;
 }
 
+static void PrepareStartupWindowRegion(MainWindow* win) {
+    HWND hwnd = win->hwndFrame;
+    if (!win->tabsInTitlebar || HwndIsVisible(hwnd) || !IsZoomed(hwnd) || win->isFullScreen || win->presentation) {
+        return;
+    }
+    // Install the final clip before DWM sees the first visible surface.
+    win->hasStartupWindowRegion = ResetMaximizedWindowRegion(hwnd);
+}
+
 void ShowMainWindow(MainWindow* win, int windowState) {
     bool wasVisible = HwndIsVisible(win->hwndFrame);
 
@@ -3536,6 +3550,9 @@ void ShowMainWindow(MainWindow* win, int windowState) {
     HwndEnsureOnScreen(win->hwndFrame);
 
     if (!wasVisible) {
+        if (windowState == WIN_STATE_MAXIMIZED) {
+            PrepareStartupWindowRegion(win);
+        }
         int showCmd = (WIN_STATE_MAXIMIZED == windowState) ? SW_MAXIMIZE : SW_SHOW;
         ShowWindow(win->hwndFrame, showCmd);
         if (WIN_STATE_FULLSCREEN == windowState) {
@@ -14013,28 +14030,49 @@ static void RepaintButton(HWND hwnd, int btnIdx, MainWindow* win) {
     }
 }
 
-static void ResetMaximizedWindowRegion(HWND hwnd) {
+static bool ResetMaximizedWindowRegion(HWND hwnd) {
     if (!IsZoomed(hwnd)) {
-        SetWindowRgn(hwnd, nullptr, TRUE);
-        return;
+        return SetWindowRgn(hwnd, nullptr, HwndIsVisible(hwnd)) != 0;
     }
 
     HMONITOR monitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
     MONITORINFO mi{};
     mi.cbSize = sizeof(mi);
     if (!monitor || !GetMonitorInfoW(monitor, &mi)) {
-        return;
+        return false;
     }
 
     RECT windowRect{};
-    GetWindowRect(hwnd, &windowRect);
+    if (!GetWindowRect(hwnd, &windowRect)) {
+        return false;
+    }
     RECT workRect = mi.rcWork;
     OffsetRect(&workRect, -windowRect.left, -windowRect.top);
 
     HRGN region = CreateRectRgnIndirect(&workRect);
-    if (region) {
-        SetWindowRgn(hwnd, region, TRUE);
+    if (!region) {
+        return false;
     }
+    if (!SetWindowRgn(hwnd, region, HwndIsVisible(hwnd))) {
+        DeleteObject(region);
+        return false;
+    }
+    return true;
+}
+
+static void UpdateStartupWindowRegion(MainWindow* win) {
+    HWND hwnd = win->hwndFrame;
+    if (!win->hasStartupWindowRegion || IsIconic(hwnd)) {
+        return;
+    }
+    // SetWindowRgn sends WINDOWPOS messages; guard against re-entry.
+    win->hasStartupWindowRegion = false;
+    if (!IsZoomed(hwnd) || !win->tabsInTitlebar || win->isFullScreen || win->presentation) {
+        win->hasStartupWindowRegion = SetWindowRgn(hwnd, nullptr, HwndIsVisible(hwnd)) == 0;
+        return;
+    }
+    ResetMaximizedWindowRegion(hwnd);
+    win->hasStartupWindowRegion = true;
 }
 
 static void ClearAllHighlights(MainWindow* win) {
@@ -14577,6 +14615,23 @@ static WCHAR gMenuAccelPressed = 0;
 
 static LRESULT CustomCaptionFrameProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp, bool* callDef, MainWindow* win) {
     switch (msg) {
+        case WM_SETTEXT:
+        case WM_SETICON: {
+            // DefWindowProc can paint a native caption directly when a region is set.
+            // Mask visibility only during the update; never show a hidden startup frame.
+            bool wasVisible = HwndIsVisible(hwnd);
+            if (wasVisible) {
+                HwndSetWindowStyle(hwnd, WS_VISIBLE, false);
+            }
+            LRESULT result = DefWindowProcW(hwnd, msg, wp, lp);
+            if (wasVisible) {
+                HwndSetWindowStyle(hwnd, WS_VISIBLE, true);
+                HwndInvalidateRect(hwnd, win->captionRect, false);
+            }
+            *callDef = false;
+            return result;
+        }
+
         case WM_SETTINGCHANGE:
             if (wp == SPI_SETNONCLIENTMETRICS) {
                 RelayoutCaption(win);
@@ -15052,6 +15107,13 @@ static void ApplyEmbeddedWindowChrome(MainWindow* win) {
 static LRESULT CALLBACK WndProcSumatraFrame(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     DpiScope dpiScope(hwnd);
     MainWindow* win = FindMainWindowByHwnd(hwnd);
+    if (win && msg == WM_WINDOWPOSCHANGED) {
+        auto* pos = (WINDOWPOS*)lp;
+        uint unchanged = SWP_NOMOVE | SWP_NOSIZE;
+        if ((pos->flags & unchanged) != unchanged || (pos->flags & SWP_FRAMECHANGED)) {
+            UpdateStartupWindowRegion(win);
+        }
+    }
     if (win && msg == WM_PAINT && HwndIsVisible(hwnd)) {
         win->needsInitialFrameBackground = false;
     }
