@@ -24,7 +24,7 @@
 
 #if FZ_ENABLE_PDF
 #include "mupdf/pdf.h"
-#include "pkcs7-windows.h"
+#include "mupdf/helpers/pkcs7-openssl.h"
 #endif
 
 #if FZ_ENABLE_JS
@@ -35,9 +35,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
-
-/* SumatraPDF: console line input for REPL (mudraw.c) */
-int fz_console_readline(char *buf, size_t size);
 
 #define PS1 "> "
 
@@ -194,8 +191,12 @@ static void jsB_read(js_State *J)
 static void jsB_readline(js_State *J)
 {
 	char line[256];
-	if (!fz_console_readline(line, sizeof line))
+	size_t n;
+	if (!fgets(line, sizeof line, stdin))
 		js_error(J, "cannot read line from stdin");
+	n = strlen(line);
+	if (n > 0 && line[n-1] == '\n')
+		line[n-1] = 0;
 	js_pushstring(J, line);
 }
 
@@ -367,9 +368,9 @@ static const char *postfix_js =
 	"}\n"
 	"\n"
 	"mupdf.Rect = {\n"
-	"	empty: [ 0x80000000, 0x80000000, 0x7fffff80, 0x7fffff80 ],\n"
+	"	empty: [ 0x7fffff80, 0x7fffff80, -1 << 31, -1 << 31 ],\n"
 	"	invalid: [ 0, 0, -1, -1 ],\n"
-	"	infinite: [ 0x7fffff80, 0x7fffff80, 0x80000000, 0x80000000 ],\n"
+	"	infinite: [ -1 << 31, -1 << 31, 0x7fffff80, 0x7fffff80 ],\n"
 	"	isEmpty: function (rect) {\n"
 	"		return rect[0] >= rect[2] || rect[1] >= rect[3]\n"
 	"	},\n"
@@ -378,10 +379,10 @@ static const char *postfix_js =
 	"	},\n"
 	"	isInfinite: function (rect) {\n"
 	"		return (\n"
-	"			rect[0] === 0x7fffff80 &&\n"
-	"			rect[1] === 0x7fffff80 &&\n"
-	"			rect[2] === 0x80000000 &&\n"
-	"			rect[3] === 0x80000000\n"
+	"			rect[0] === -1 << 31 &&\n"
+	"			rect[1] === -1 << 31 &&\n"
+	"			rect[2] === 0x7fffff80 &&\n"
+	"			rect[3] === 0x7fffff80\n"
 	"		)\n"
 	"	},\n"
 	"	transform: function (rect, matrix) {\n"
@@ -416,9 +417,9 @@ static const char *postfix_js =
 	"		return p[0] >= r[0] && p[0] < r[1] && p[1] >= r[2] && p[1] < r[3]\n"
 	"	},\n"
 	"	rectFromQuad: function (q) {\n"
-	"		if (!Quad.isValid(r))\n"
+	"		if (!Quad.isValid(q))\n"
 	"			return Rect.invalid\n"
-	"		if (Quad.isInfinite(r))\n"
+	"		if (Quad.isInfinite(q))\n"
 	"			return Rect.infinite\n"
 	"		return [\n"
 	"			Math.min(q[0], q[2], q[4], q[6]),\n"
@@ -4261,7 +4262,7 @@ static void ffi_Document_resolveLink(js_State *J)
 
 	if (js_isuserdata(J, 1, "fz_link"))
 	{
-		fz_link *link = js_touserdata(J, 0, "fz_link");
+		fz_link *link = js_touserdata(J, 1, "fz_link");
 		uri = link->uri;
 	}
 	else
@@ -4284,7 +4285,7 @@ static void ffi_Document_resolveLinkDestination(js_State *J)
 
 	if (js_isuserdata(J, 1, "fz_link"))
 	{
-		fz_link *link = js_touserdata(J, 0, "fz_link");
+		fz_link *link = js_touserdata(J, 1, "fz_link");
 		uri = link->uri;
 	}
 	else
@@ -7770,6 +7771,8 @@ static void ffi_PDFDocument_addEmbeddedFile(js_State *J)
 
 	if (created >= 0) created /= 1000;
 	if (modified >= 0) modified /= 1000;
+
+	fz_var(ind);
 
 	fz_try(ctx)
 		ind = pdf_add_embedded_file(ctx, pdf, filename, mimetype, contents,
@@ -11957,7 +11960,7 @@ static void ffi_PDFWidget_checkCertificate(js_State *J)
 	fz_var(verifier);
 	fz_try(ctx)
 	{
-		verifier = pkcs7_windows_new_verifier(ctx);
+		verifier = pkcs7_openssl_new_verifier(ctx);
 		val = pdf_check_widget_certificate(ctx, verifier, widget);
 	}
 	fz_always(ctx)
@@ -11976,7 +11979,7 @@ static void ffi_PDFWidget_checkDigest(js_State *J)
 	fz_var(verifier);
 	fz_try(ctx)
 	{
-		verifier = pkcs7_windows_new_verifier(ctx);
+		verifier = pkcs7_openssl_new_verifier(ctx);
 		val = pdf_check_widget_digest(ctx, verifier, widget);
 	}
 	fz_always(ctx)
@@ -12009,7 +12012,7 @@ static void ffi_PDFWidget_getSignatory(js_State *J)
 	fz_var(dn);
 	fz_try(ctx)
 	{
-		verifier = pkcs7_windows_new_verifier(ctx);
+		verifier = pkcs7_openssl_new_verifier(ctx);
 		dn = pdf_signature_get_widget_signatory(ctx, verifier, widget);
 		if (dn)
 		{
@@ -12322,7 +12325,7 @@ static void ffi_new_PDFPKCS7Signer(js_State *J)
 	{
 		fz_buffer *buf = ffi_tonewbuffer(J, 1);
 		fz_try(ctx)
-			signer = pkcs7_windows_read_pfx_from_buffer(ctx, buf, password);
+			signer = pkcs7_openssl_read_pfx_from_buffer(ctx, buf, password);
 		fz_always(ctx)
 			fz_drop_buffer(ctx, buf);
 		fz_catch(ctx)
@@ -12332,7 +12335,7 @@ static void ffi_new_PDFPKCS7Signer(js_State *J)
 	{
 		const char *filename = js_tostring(J, 1);
 		fz_try(ctx)
-			signer = pkcs7_windows_read_pfx(ctx, filename, password);
+			signer = pkcs7_openssl_read_pfx(ctx, filename, password);
 		fz_catch(ctx)
 			rethrow(J);
 	}
@@ -13596,7 +13599,7 @@ int murun_main(int argc, char **argv)
 	} else {
 		char line[256];
 		fputs(PS1, stdout);
-		while (fz_console_readline(line, sizeof line)) {
+		while (fgets(line, sizeof line, stdin)) {
 			eval_print(J, line);
 			fputs(PS1, stdout);
 		}

@@ -830,9 +830,6 @@ compressed_image_get_pixmap(fz_context *ctx, fz_image *image_, fz_irect *subarea
 	case FZ_IMAGE_BMP:
 		tile = fz_load_bmp(ctx, image->buffer->buffer->data, image->buffer->buffer->len);
 		break;
-	case FZ_IMAGE_WEBP:
-		tile = fz_load_webp(ctx, image->buffer->buffer->data, image->buffer->buffer->len);
-		break;
 	case FZ_IMAGE_TIFF:
 		tile = fz_load_tiff(ctx, image->buffer->buffer->data, image->buffer->buffer->len);
 		break;
@@ -1021,7 +1018,7 @@ fz_find_image_tile(fz_context *ctx, fz_image *image, fz_image_key *key, fz_matri
 fz_pixmap *
 fz_get_pixmap_from_image(fz_context *ctx, fz_image *image, const fz_irect *subarea, fz_matrix *ctm, int *dw, int *dh)
 {
-	fz_pixmap *tile;
+	fz_pixmap *tile = NULL;
 	int l2factor, l2factor_remaining;
 	fz_image_key key;
 	fz_image_key *keyp = NULL;
@@ -1029,6 +1026,7 @@ fz_get_pixmap_from_image(fz_context *ctx, fz_image *image, const fz_irect *subar
 	int h;
 
 	fz_var(keyp);
+	fz_var(tile);
 
 	if (!image)
 		return NULL;
@@ -1434,7 +1432,6 @@ fz_image_type_name(int type)
 	case FZ_IMAGE_PNG: return "png";
 	case FZ_IMAGE_PNM: return "pnm";
 	case FZ_IMAGE_TIFF: return "tiff";
-	case FZ_IMAGE_WEBP: return "webp";
 	}
 }
 
@@ -1457,12 +1454,11 @@ fz_lookup_image_type(const char *type)
 	if (!strcmp(type, "png")) return FZ_IMAGE_PNG;
 	if (!strcmp(type, "pnm")) return FZ_IMAGE_PNM;
 	if (!strcmp(type, "tiff")) return FZ_IMAGE_TIFF;
-	if (!strcmp(type, "webp")) return FZ_IMAGE_WEBP;
 	return FZ_IMAGE_UNKNOWN;
 }
 
 int
-fz_recognize_image_format(fz_context *ctx, unsigned char p[12])
+fz_recognize_image_format(fz_context *ctx, unsigned char p[8])
 {
 	if (p[0] == 'P' && p[1] >= '1' && p[1] <= '7')
 		return FZ_IMAGE_PNM;
@@ -1495,9 +1491,6 @@ fz_recognize_image_format(fz_context *ctx, unsigned char p[12])
 		return FZ_IMAGE_JBIG2;
 	if (p[0] == '8' && p[1] == 'B' && p[2] == 'P' && p[3] == 'S')
 		return FZ_IMAGE_PSD;
-	if (p[0] == 'R' && p[1] == 'I' && p[2] == 'F' && p[3] == 'F' &&
-		p[8] == 'W' && p[9] == 'E' && p[10] == 'B' && p[11] == 'P')
-		return FZ_IMAGE_WEBP;
 	return FZ_IMAGE_UNKNOWN;
 }
 
@@ -1517,14 +1510,7 @@ fz_new_image_from_buffer(fz_context *ctx, fz_buffer *buffer)
 	if (len < 8)
 		fz_throw(ctx, FZ_ERROR_FORMAT, "unknown image file format");
 
-	if (len < 12)
-	{
-		unsigned char head[12] = {0};
-		memcpy(head, buf, len);
-		type = fz_recognize_image_format(ctx, head);
-	}
-	else
-		type = fz_recognize_image_format(ctx, buf);
+	type = fz_recognize_image_format(ctx, buf);
 	bpc = 8;
 	switch (type)
 	{
@@ -1558,9 +1544,6 @@ fz_new_image_from_buffer(fz_context *ctx, fz_buffer *buffer)
 	case FZ_IMAGE_JBIG2:
 		fz_load_jbig2_info(ctx, buf, len, &w, &h, &xres, &yres, &cspace);
 		bpc = 1;
-		break;
-	case FZ_IMAGE_WEBP:
-		fz_load_webp_info(ctx, buf, len, &w, &h, &xres, &yres, &cspace);
 		break;
 	default:
 		fz_throw(ctx, FZ_ERROR_FORMAT, "unknown image file format");

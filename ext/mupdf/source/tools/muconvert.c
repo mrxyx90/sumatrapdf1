@@ -53,7 +53,7 @@ static int count;
 static int usage(void)
 {
 	fprintf(stderr,
-		"Usage: SumatraPDF convert [options] file [pages]\n"
+		"Usage: mutool convert [options] file [pages]\n"
 		"\t-p -\tpassword\n"
 		"\n"
 		"\t-o -\toutput file name (%%d for page number)\n"
@@ -137,8 +137,6 @@ int muconvert_main(int argc, char **argv)
 {
 	int i, c;
 	int retval = EXIT_SUCCESS;
-
-	fz_optind = 1;
 
 	while ((c = fz_getopt(argc, argv, "p:A:W:H:S:U:Xo:F:O:b:")) != -1)
 	{

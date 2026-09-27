@@ -316,21 +316,6 @@ static const struct {
 	{"yellowgreen", {154,205,50,255}},
 };
 
-static inline int fz_tolower_ascii(int c)
-{
-	if ((unsigned int)c - 'A' < 26)
-		return c | 32;
-	return c;
-}
-
-static int fz_strcasecmp_ascii(const char *a, const char *b)
-{
-	const unsigned char *l = (void *)a, *r = (void *)b;
-	while (*l && *r && (*l == *r || fz_tolower_ascii(*l) == fz_tolower_ascii(*r)))
-		l++, r++;
-	return fz_tolower_ascii(*l) - fz_tolower_ascii(*r);
-}
-
 static const fz_css_color *
 lookup_named_color(const char *name)
 {
@@ -435,20 +420,12 @@ count_selector_names(fz_css_selector *sel)
 
 #define INLINE_SPECIFICITY 10000
 
-/* SumatraPDF: a user (settings) stylesheet's !important declarations must beat
- * the publisher's rules *and* inline style attributes, as they do in a browser
- * (in the CSS cascade user-origin !important wins over author-origin).
- * Above INLINE_SPECIFICITY but well inside the short of fz_css_match.spec */
-#define USER_IMPORTANT_SPECIFICITY 20000
-
 static int
-selector_specificity(fz_css_selector *sel, int important, int user)
+selector_specificity(fz_css_selector *sel, int important)
 {
 	int b = count_selector_ids(sel);
 	int c = count_selector_atts(sel);
 	int d = count_selector_names(sel);
-	if (important && user)
-		return USER_IMPORTANT_SPECIFICITY + b * 100 + c * 10 + d;
 	return important * 1000 + b * 100 + c * 10 + d;
 }
 
@@ -1008,71 +985,11 @@ add_shorthand_font(fz_css_match *match, fz_css_value *value, int spec)
 		add_property(match, PRO_FONT_WEIGHT, &static_value_normal, spec);
 }
 
-static fz_css_value static_value_none = { CSS_KEYWORD, "none", NULL, NULL };
-static fz_css_value static_value_transparent = { CSS_KEYWORD, "transparent", NULL, NULL };
-static fz_css_value static_value_auto = { CSS_KEYWORD, "auto", NULL, NULL };
-static fz_css_value static_value_repeat = { CSS_KEYWORD, "repeat", NULL, NULL };
-
-/* sorted for keyword_in_list */
-static const char *background_position_kw[] = { "bottom", "center", "left", "right", "top" };
-static const char *background_repeat_kw[] = { "no-repeat", "repeat", "repeat-x", "repeat-y" };
-static const char *background_size_kw[] = { "auto", "contain", "cover" };
-
-static int
-is_background_position_value(fz_css_value *value)
-{
-	if (value->type == CSS_LENGTH || value->type == CSS_PERCENT || value->type == CSS_NUMBER)
-		return 1;
-	return value->type == CSS_KEYWORD && keyword_in_list(value->data, background_position_kw, nelem(background_position_kw));
-}
-
-static int
-is_background_size_value(fz_css_value *value)
-{
-	if (value->type == CSS_LENGTH || value->type == CSS_PERCENT || value->type == CSS_NUMBER)
-		return 1;
-	return value->type == CSS_KEYWORD && keyword_in_list(value->data, background_size_kw, nelem(background_size_kw));
-}
-
-/* background: [color] [image] [position [/ size]] [repeat], any order.
- * Longhands not mentioned reset to their initial value. */
 static void
 add_shorthand_background(fz_css_match *match, fz_css_value *value, int spec)
 {
-	fz_css_value *color = &static_value_transparent;
-	fz_css_value *image = &static_value_none;
-	fz_css_value *position = NULL;
-	fz_css_value *size = &static_value_auto;
-	fz_css_value *repeat = &static_value_repeat;
-
-	for (; value; value = value->next)
-	{
-		if (value->type == CSS_URI)
-			image = value;
-		else if (value->type == '/')
-		{
-			size = value->next;
-			while (value->next && is_background_size_value(value->next))
-				value = value->next;
-		}
-		else if (value->type == CSS_KEYWORD && !strcmp(value->data, "none"))
-			image = value;
-		else if (value->type == CSS_KEYWORD && keyword_in_list(value->data, background_repeat_kw, nelem(background_repeat_kw)))
-			repeat = value;
-		else if (is_background_position_value(value))
-		{
-			if (!position)
-				position = value;
-		}
-		else
-			color = value;
-	}
-
-	add_property(match, PRO_BACKGROUND_COLOR, color, spec);
-	add_property(match, PRO_BACKGROUND_IMAGE, image, spec);
-	add_property(match, PRO_BACKGROUND_POSITION, position, spec);
-	add_property(match, PRO_BACKGROUND_SIZE, size, spec);
-	add_property(match, PRO_BACKGROUND_REPEAT, repeat, spec);
+	/* TODO: background-image, -origin, -size, -repeat */
+	add_property(match, PRO_BACKGROUND_COLOR, value, spec);
 }
 
 static void
@@ -1156,7 +1073,7 @@ fz_match_css(fz_context *ctx, fz_css_match *match, fz_css_match *up, fz_css *css
 			if (match_selector(sel, node, pseudo))
 			{
 				for (prop = rule->declaration; prop; prop = prop->next)
-					add_property(match, prop->name, prop->value, selector_specificity(sel, prop->important, rule->user));
+					add_property(match, prop->name, prop->value, selector_specificity(sel, prop->important));
 				break;
 			}
 			sel = sel->next;
@@ -1211,7 +1128,7 @@ fz_match_css_at_page(fz_context *ctx, fz_css_match *match, fz_css *css)
 			if (sel->name && !strcmp(sel->name, "@page"))
 			{
 				for (prop = rule->declaration; prop; prop = prop->next)
-					add_property(match, prop->name, prop->value, selector_specificity(sel, prop->important, rule->user));
+					add_property(match, prop->name, prop->value, selector_specificity(sel, prop->important));
 				break;
 			}
 			sel = sel->next;
@@ -1898,94 +1815,6 @@ page_break_from_property(fz_css_match *match, int prop)
 	return PB_AUTO;
 }
 
-static const char *
-background_image_from_property(fz_css_match *match)
-{
-	fz_css_value *value = value_from_property(match, PRO_BACKGROUND_IMAGE);
-	if (value && value->type == CSS_URI && value->data[0])
-		return value->data;
-	return NULL;
-}
-
-static int
-background_repeat_from_property(fz_css_match *match)
-{
-	fz_css_value *value = value_from_property(match, PRO_BACKGROUND_REPEAT);
-	if (value)
-	{
-		if (!strcmp(value->data, "no-repeat")) return BGR_NO_REPEAT;
-		if (!strcmp(value->data, "repeat-x")) return BGR_REPEAT_X;
-		if (!strcmp(value->data, "repeat-y")) return BGR_REPEAT_Y;
-	}
-	return BGR_REPEAT;
-}
-
-/* background-size: auto | cover | contain | <w> [<h>]; a missing <h> is auto. */
-static void
-background_size_from_property(fz_css_match *match, fz_css_style *style)
-{
-	fz_css_value *value = value_from_property(match, PRO_BACKGROUND_SIZE);
-	int i;
-
-	style->background_size_mode = BGS_LENGTH;
-	style->background_size[0] = make_number(0, N_AUTO);
-	style->background_size[1] = make_number(0, N_AUTO);
-
-	if (value && value->type == CSS_KEYWORD)
-	{
-		if (!strcmp(value->data, "cover")) { style->background_size_mode = BGS_COVER; return; }
-		if (!strcmp(value->data, "contain")) { style->background_size_mode = BGS_CONTAIN; return; }
-	}
-
-	for (i = 0; i < 2 && value && is_background_size_value(value); i++, value = value->next)
-		if (value->type != CSS_KEYWORD)
-			style->background_size[i] = number_from_value(value, 0, N_AUTO);
-}
-
-static fz_css_number
-background_position_edge(fz_css_value *value)
-{
-	if (value->type != CSS_KEYWORD)
-		return number_from_value(value, 0, N_PERCENT);
-	if (!strcmp(value->data, "center"))
-		return make_number(50, N_PERCENT);
-	if (!strcmp(value->data, "right") || !strcmp(value->data, "bottom"))
-		return make_number(100, N_PERCENT);
-	return make_number(0, N_PERCENT);
-}
-
-/* background-position: <x> [<y>]; a lone value centers the other axis.
- * Two keywords may come in either order ("top left"). */
-static void
-background_position_from_property(fz_css_match *match, fz_css_style *style)
-{
-	fz_css_value *x = value_from_property(match, PRO_BACKGROUND_POSITION);
-	fz_css_value *y = NULL;
-
-	style->background_position[0] = make_number(0, N_PERCENT);
-	style->background_position[1] = make_number(0, N_PERCENT);
-
-	if (!x || !is_background_position_value(x))
-		return;
-	if (x->next && is_background_position_value(x->next))
-		y = x->next;
-
-	if (y && x->type == CSS_KEYWORD && y->type == CSS_KEYWORD)
-	{
-		int x_is_vertical = !strcmp(x->data, "top") || !strcmp(x->data, "bottom");
-		int y_is_horizontal = !strcmp(y->data, "left") || !strcmp(y->data, "right");
-		if (x_is_vertical || y_is_horizontal)
-		{
-			fz_css_value *t = x;
-			x = y;
-			y = t;
-		}
-	}
-
-	style->background_position[0] = background_position_edge(x);
-	style->background_position[1] = y ? background_position_edge(y) : make_number(50, N_PERCENT);
-}
-
 void
 fz_default_css_style(fz_context *ctx, fz_css_style *style)
 {
@@ -2163,10 +1992,6 @@ fz_apply_css_style(fz_context *ctx, fz_html_font_set *set, fz_css_style *style, 
 	style->text_fill_color = color_from_properties(match, PRO_TEXT_FILL_COLOR, PRO_COLOR, black);
 	style->text_stroke_color = color_from_property(match, PRO_TEXT_STROKE_COLOR, transparent);
 	style->background_color = color_from_property(match, PRO_BACKGROUND_COLOR, transparent);
-	style->background_image = background_image_from_property(match);
-	style->background_repeat = background_repeat_from_property(match);
-	background_size_from_property(match, style);
-	background_position_from_property(match, style);
 
 	style->border_spacing = number_from_property(match, PRO_BORDER_SPACING, 0, N_LENGTH);
 
@@ -2490,7 +2315,7 @@ static void print_rule(fz_css_rule *rule)
 	for (sel = rule->selector; sel; sel = sel->next)
 	{
 		print_selector(sel);
-		printf(" /* %d */", selector_specificity(sel, 0, 0));
+		printf(" /* %d */", selector_specificity(sel, 0));
 		if (sel->next)
 			printf(", ");
 	}

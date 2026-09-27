@@ -41,7 +41,7 @@
 static int usage(void)
 {
 	fprintf(stderr,
-		"Usage: SumatraPDF clean [options] input.pdf [output.pdf] [pages]\n"
+		"usage: mutool clean [options] input.pdf [output.pdf] [pages]\n"
 		"\t-p -\tpassword\n"
 		"\t-g\tgarbage collect unused objects\n"
 		"\t-gg\tin addition to -g compact xref table\n"

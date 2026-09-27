@@ -696,8 +696,6 @@ static fz_image *load_html_image(fz_context *ctx, fz_archive *zip, const char *b
 			buf = fz_new_buffer_from_base64(ctx, src+22, 0);
 		else if (!strncmp(src, "data:image/gif;base64,", 22))
 			buf = fz_new_buffer_from_base64(ctx, src+22, 0);
-		else if (!strncmp(src, "data:image/webp;base64,", 23))
-			buf = fz_new_buffer_from_base64(ctx, src+23, 0);
 		else
 		{
 			fz_strlcpy(path, base_uri, sizeof path);
@@ -781,7 +779,6 @@ static void fz_drop_html_box(fz_context *ctx, fz_html_box *box)
 		fz_html_box *next = box->next;
 		if (box->type == BOX_FLOW)
 			fz_drop_html_flow(ctx, box->u.flow.head);
-		fz_drop_image(ctx, box->background_image);
 		fz_drop_html_box(ctx, box->down);
 		box = next;
 	}
@@ -870,10 +867,6 @@ static fz_html_box *new_box(fz_context *ctx, struct genstate *g, fz_xml *node, i
 #endif
 
 	box->style = fz_css_enlist(ctx, style, &g->styles, g->pool);
-
-	/* Only element boxes own a background image; anonymous boxes borrow the style but must not repaint it. */
-	if (node && style->background_image && fz_html_box_has_boxes(box))
-		box->background_image = load_html_image(ctx, g->zip, g->base_uri, style->background_image);
 
 	if (tag)
 	{
@@ -1416,21 +1409,12 @@ static void gen2_tag(fz_context *ctx, struct genstate *g, fz_html_box *root_box,
 	const char *lang_att;
 	const char *dir_att;
 
-	int save_markup_dir;
-	int save_markup_lang;
-	char *save_href;
-
-	/* Limit recursion depth to prevent stack overflow on deeply nested HTML. */
-	if (g->depth > 500)
-		return;
-	g->depth++;
-
-	save_markup_dir = g->markup_dir;
-	save_markup_lang = g->markup_lang;
-	save_href = g->href;
+	int save_markup_dir = g->markup_dir;
+	int save_markup_lang = g->markup_lang;
+	char *save_href = g->href;
 
 	if (display == DIS_NONE)
-		goto end;
+		return;
 
 	if (g->depth > 100)
 	{
@@ -1575,7 +1559,6 @@ static void gen2_tag(fz_context *ctx, struct genstate *g, fz_html_box *root_box,
 	}
 
 end:
-	g->depth--;
 	g->markup_dir = save_markup_dir;
 	g->markup_lang = save_markup_lang;
 	g->href = save_href;
@@ -1629,6 +1612,23 @@ static void gen2_children(fz_context *ctx, struct genstate *g, fz_html_box *root
 			else if (tag[0]=='c' && tag[1]=='o' && tag[2]=='l' && tag[3]==0)
 			{
 				gen2_col(ctx, g, root_box, node, &match);
+			}
+			else if (tag[0]=='t')
+			{
+				// ignore any display value other than "table(-row-group|-row|-cell)" or "none" on table elements
+				if (display != DIS_NONE)
+				{
+					if (!strcmp(tag, "table"))
+						gen2_tag(ctx, g, root_box, node, &match, DIS_TABLE, &style);
+					else if (!strcmp(tag, "thead") || !strcmp(tag, "tbody") || !strcmp(tag, "tfoot"))
+						gen2_tag(ctx, g, root_box, node, &match, DIS_TABLE_GROUP, &style);
+					else if (!strcmp(tag, "tr"))
+						gen2_tag(ctx, g, root_box, node, &match, DIS_TABLE_ROW, &style);
+					else if (!strcmp(tag, "td") || !strcmp(tag, "th"))
+						gen2_tag(ctx, g, root_box, node, &match, DIS_TABLE_CELL, &style);
+					else
+						gen2_tag(ctx, g, root_box, node, &match, display, &style);
+				}
 			}
 			else
 			{
@@ -2288,7 +2288,7 @@ xml_to_boxes(fz_context *ctx,
 			move_background_color_up(ctx, &g, tree->root);
 
 			// Parse meta viewport size.
-			if (meta_w && meta_h)
+			if (publisher_css && meta_w && meta_h)
 			{
 				node = fz_xml_find_down_match(head, "meta", "name", "viewport");
 				if (node)

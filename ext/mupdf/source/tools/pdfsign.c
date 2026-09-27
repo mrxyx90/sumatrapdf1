@@ -26,7 +26,7 @@
 
 #include "mupdf/fitz.h"
 #include "mupdf/pdf.h"
-#include "pkcs7-windows.h"
+#include "mupdf/helpers/pkcs7-openssl.h"
 
 #include <string.h>
 #include <stdlib.h>
@@ -44,7 +44,7 @@ static int list = 1;
 static int usage(void)
 {
 	fprintf(stderr,
-		"Usage: SumatraPDF sign [options] input.pdf [signature object numbers]\n"
+		"usage: mutool sign [options] input.pdf [signature object numbers]\n"
 		"\t-p -\tpassword\n"
 		"\t-v \tverify signature\n"
 		"\t-c \tclear signatures\n"
@@ -72,7 +72,7 @@ static void verify_signature(fz_context *ctx, pdf_document *doc, pdf_obj *signat
 		return;
 	}
 
-	verifier = pkcs7_windows_new_verifier(ctx);
+	verifier = pkcs7_openssl_new_verifier(ctx);
 	fz_var(dn);
 	fz_try(ctx)
 	{
@@ -181,7 +181,7 @@ static void sign_signature(fz_context *ctx, pdf_document *doc, pdf_obj *signatur
 
 	fz_try(ctx)
 	{
-		signer = pkcs7_windows_read_pfx(ctx, certificatefile, certificatepassword);
+		signer = pkcs7_openssl_read_pfx(ctx, certificatefile, certificatepassword);
 
 		parent = pdf_dict_get(ctx, signature, PDF_NAME(P));
 		if (pdf_is_dict(ctx, parent))
@@ -229,7 +229,7 @@ static void list_signature(fz_context *ctx, pdf_document *doc, pdf_obj *signatur
 		return;
 	}
 
-	verifier = pkcs7_windows_new_verifier(ctx);
+	verifier = pkcs7_openssl_new_verifier(ctx);
 
 	dn = pdf_signature_get_signatory(ctx, verifier, doc, signature);
 	if (dn)
@@ -311,6 +311,7 @@ int pdfsign_main(int argc, char **argv)
 	fz_context *ctx;
 	pdf_document *doc = NULL;
 	char *password = "";
+	pdf_obj *field = NULL;
 	int c;
 
 	while ((c = fz_getopt(argc, argv, "co:p:s:vP:")) != -1)
@@ -346,6 +347,7 @@ int pdfsign_main(int argc, char **argv)
 	}
 
 	fz_var(doc);
+	fz_var(field);
 
 	fz_try(ctx)
 	{
@@ -366,9 +368,10 @@ int pdfsign_main(int argc, char **argv)
 		{
 			while (argc - fz_optind)
 			{
-				pdf_obj *field = pdf_new_indirect(ctx, doc, fz_atoi(argv[fz_optind]), 0);
+				field = pdf_new_indirect(ctx, doc, fz_atoi(argv[fz_optind]), 0);
 				process_field(ctx, doc, field);
 				pdf_drop_obj(ctx, field);
+				field = NULL;
 				fz_optind++;
 			}
 		}
@@ -383,7 +386,10 @@ int pdfsign_main(int argc, char **argv)
 		}
 	}
 	fz_always(ctx)
+	{
+		pdf_drop_obj(ctx, field);
 		pdf_drop_document(ctx, doc);
+	}
 	fz_catch(ctx)
 	{
 		fz_report_error(ctx);

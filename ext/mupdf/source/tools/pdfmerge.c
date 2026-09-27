@@ -36,7 +36,7 @@
 static int usage(void)
 {
 	fprintf(stderr,
-		"Usage: SumatraPDF merge [-o output.pdf] [-O options] input.pdf [pages] [input2.pdf] [pages2] ...\n"
+		"usage: mutool merge [-o output.pdf] [-O options] input.pdf [pages] [input2.pdf] [pages2] ...\n"
 		"\t-o -\tname of PDF file to create\n"
 		"\t-O -\tcomma separated list of output options\n"
 		"\tinput.pdf\tname of input file from which to copy pages\n"
@@ -125,7 +125,7 @@ position_in_range(fz_context *ctx, const char *range, int count, int page)
 		else
 		{
 			if (end <= page && page <= start)
-				return n + start - page + 1;
+				return n + page - end + 1;
 			n += start - end + 1;
 		}
 	}
@@ -321,7 +321,6 @@ int pdfmerge_main(int argc, char **argv)
 	char *flags = "";
 	char *input;
 	int c;
-	int failed = 0;
 	fz_context *ctx;
 
 	while ((c = fz_getopt(argc, argv, "o:O:")) != -1)
@@ -381,7 +380,6 @@ int pdfmerge_main(int argc, char **argv)
 		{
 			fz_report_error(ctx);
 			fz_log_error_printf(ctx, "Cannot merge document '%s'.", input);
-			failed = 1;
 		}
 	}
 
@@ -393,12 +391,11 @@ int pdfmerge_main(int argc, char **argv)
 		{
 			fz_report_error(ctx);
 			fz_log_error_printf(ctx, "Cannot save output file: '%s'.", output);
-			failed = 1;
 		}
 	}
 
 	pdf_drop_document(ctx, doc_des);
 	fz_flush_warnings(ctx);
 	fz_drop_context(ctx);
-	return failed;
+	return 0;
 }

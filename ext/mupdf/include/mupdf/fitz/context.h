@@ -26,6 +26,7 @@
 #include "mupdf/fitz/version.h"
 #include "mupdf/fitz/system.h"
 #include "mupdf/fitz/geometry.h"
+#include "mupdf/fitz/crypt.h"
 
 
 #ifndef FZ_VERBOSE_EXCEPTIONS
@@ -130,13 +131,6 @@ void fz_warn(fz_context *ctx, const char *fmt, ...) FZ_PRINTFLIKE(2,3);
 	This assumes no intervening use of fz_try/fz_catch.
 */
 const char *fz_caught_message(fz_context *ctx);
-
-/**
-	SumatraPDF: message from the last uncaught fz_throw (no active fz_try),
-	or NULL if none. Used by the crash handler so reports still explain the
-	failure when the callstack only shows the intentional abort write.
-*/
-const char *fz_last_uncaught_error(void);
 
 /**
 	Within an fz_catch() block, retrieve the error code for
@@ -914,7 +908,7 @@ struct fz_context
 
 	/* unshared contexts */
 	fz_aa_context aa;
-	uint16_t seed48[7];
+	fz_chacha20 seed;
 #if FZ_ENABLE_ICC
 	int icc_enabled;
 #endif
@@ -1111,6 +1105,14 @@ fz_drop_imp16_aux(fz_context *ctx, void *p, int16_t *refs)
 		return drop;
 	}
 	return 0;
+}
+
+static inline void *
+fz_unconst(const void *cp)
+{
+	union { void *p; const void *cp; } u;
+	u.cp = cp;
+	return u.p;
 }
 
 #endif

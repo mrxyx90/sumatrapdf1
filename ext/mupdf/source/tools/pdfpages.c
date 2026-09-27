@@ -35,7 +35,7 @@ static int
 infousage(void)
 {
 	fprintf(stderr,
-		"Usage: SumatraPDF pages [options] file.pdf [pages]\n"
+		"usage: mutool pages [options] file.pdf [pages]\n"
 		"\t-p -\tpassword for decryption\n"
 		"\tpages\tcomma separated list of page numbers and ranges\n"
 		);
@@ -164,6 +164,8 @@ pdfpages_pages(fz_context *ctx, fz_output *out, char *filename, char *password, 
 	int argidx = 0;
 	pdf_document *doc = NULL;
 	int ret = 0;
+
+	fz_var(doc);
 
 	fz_try(ctx)
 	{

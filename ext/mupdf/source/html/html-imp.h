@@ -90,10 +90,6 @@ struct fz_css_rule_s
 	fz_css_property *declaration;
 	fz_css_rule *next;
 	int loaded;
-	/* SumatraPDF: rule comes from the user stylesheet (fz_style_document's
-	 * user_css), which makes its !important declarations outrank both the
-	 * publisher's rules and inline style attributes */
-	int user;
 };
 
 struct fz_css_selector_s
@@ -134,10 +130,6 @@ struct fz_css_value_s
 enum
 {
 	PRO_BACKGROUND_COLOR,
-	PRO_BACKGROUND_IMAGE,
-	PRO_BACKGROUND_POSITION,
-	PRO_BACKGROUND_REPEAT,
-	PRO_BACKGROUND_SIZE,
 	PRO_BORDER_BOTTOM_COLOR,
 	PRO_BORDER_BOTTOM_STYLE,
 	PRO_BORDER_BOTTOM_WIDTH,
@@ -241,8 +233,6 @@ enum { V_VISIBLE, V_HIDDEN, V_COLLAPSE };
 enum { PB_AUTO, PB_ALWAYS, PB_AVOID, PB_LEFT, PB_RIGHT };
 enum { TD_NONE, TD_UNDERLINE, TD_LINE_THROUGH };
 enum { HYP_NONE, HYP_MANUAL, HYP_AUTO };
-enum { BGS_LENGTH, BGS_COVER, BGS_CONTAIN };
-enum { BGR_REPEAT, BGR_REPEAT_X, BGR_REPEAT_Y, BGR_NO_REPEAT };
 
 enum {
 	WS_COLLAPSE = 1,
@@ -311,9 +301,6 @@ struct fz_css_style_s
 	fz_css_color text_fill_color;
 	fz_css_color text_stroke_color;
 	fz_css_number vertical_align_number;
-	const char *background_image;
-	fz_css_number background_size[2];
-	fz_css_number background_position[2];
 
 	unsigned int rowspan : 10; /* Needs to be able to represent 1-1000 */
 	unsigned int colspan : 10; /* Needs to be able to represent 1-1000 */
@@ -335,8 +322,6 @@ struct fz_css_style_s
 	unsigned int position : 2;
 	unsigned int border_collapse : 1;
 	unsigned int hyphens : 2;
-	unsigned int background_size_mode : 2;
-	unsigned int background_repeat : 2;
 };
 
 struct fz_css_style_splay_s {
@@ -508,7 +493,6 @@ struct fz_html_box_s
 
 	const char *tag, *id, *href;
 	const fz_css_style *style;
-	fz_image *background_image;
 #ifdef DEBUG_HTML_SEQ
 	int seq;
 #endif

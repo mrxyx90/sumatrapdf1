@@ -29,7 +29,7 @@
 /* default page size */
 #define DEF_WIDTH 612
 #define DEF_HEIGHT 792
-#define DEF_FONTSIZE 12
+#define DEF_FONTSIZE 16
 
 #define MAX_USE_DEPTH 100
 
@@ -241,7 +241,7 @@ svg_run_circle(fz_context *ctx, fz_device *dev, svg_document *doc, fz_xml *node,
 
 		if (cx_att) cx = svg_parse_length(cx_att, local_state.viewbox_w, local_state.fontsize);
 		if (cy_att) cy = svg_parse_length(cy_att, local_state.viewbox_h, local_state.fontsize);
-		if (r_att) r = svg_parse_length(r_att, local_state.viewbox_size, 12);
+		if (r_att) r = svg_parse_length(r_att, local_state.viewbox_size, local_state.fontsize);
 
 		if (r > 0)
 		{
@@ -1041,75 +1041,17 @@ svg_parse_viewbox(fz_context *ctx, svg_document *doc, fz_xml *node, svg_state *s
 static const char *linecap_table[] = { "butt", "round", "square" };
 static const char *linejoin_table[] = { "miter", "round", "bevel" };
 
-/* SumatraPDF: minimal CSS class support (#2155) */
-static int
-svg_has_class(const char *class_att, const char *name)
-{
-	size_t n = strlen(name);
-	const char *p = class_att;
-
-	while (*p)
-	{
-		while (*p && svg_is_whitespace(*p))
-			++p;
-		if (!strncmp(p, name, n) && (!p[n] || svg_is_whitespace(p[n])))
-			return 1;
-		while (*p && !svg_is_whitespace(*p))
-			++p;
-	}
-
-	return 0;
-}
-
-/* Splice the declarations of the element's classes onto its style attribute.
- * The svg_parse_*_from_style() lookups take the first match, so the inline
- * style comes first and the class rules follow in cascade order.
- * Returns NULL (use style_att as is) when no class rule applies. */
-static char *
-svg_style_with_classes(fz_context *ctx, svg_document *doc, fz_xml *node, const char *style_att)
-{
-	const char *class_att = fz_xml_att(node, "class");
-	svg_class *cls;
-	size_t n = 1;
-	char *s, *p;
-
-	if (!class_att || !doc->classes)
-		return NULL;
-
-	for (cls = doc->classes; cls; cls = cls->next)
-		if (svg_has_class(class_att, cls->name))
-			n += strlen(cls->decl) + 1;
-	if (n == 1)
-		return NULL;
-	if (style_att)
-		n += strlen(style_att) + 1;
-
-	p = s = fz_malloc(ctx, n);
-	if (style_att)
-	{
-		p += fz_strlcpy(p, style_att, n);
-		*p++ = ';';
-	}
-	for (cls = doc->classes; cls; cls = cls->next)
-		if (svg_has_class(class_att, cls->name))
-		{
-			p += fz_strlcpy(p, cls->decl, n - (p - s));
-			*p++ = ';';
-		}
-	*p = 0;
-
-	return s;
-}
-
 /* parse transform and presentation attributes */
 static void
-svg_parse_common_imp(fz_context *ctx, svg_document *doc, fz_xml *node, svg_state *state, char *style_att)
+svg_parse_common(fz_context *ctx, svg_document *doc, fz_xml *node, svg_state *state)
 {
 	fz_stroke_state *stroke = state->stroke = fz_unshare_stroke_state(ctx, state->stroke);
 
 	char *transform_att = fz_xml_att(node, "transform");
 
 	char *font_size_att = fz_xml_att(node, "font-size");
+
+	char *style_att = fz_xml_att(node, "style");
 
 	// TODO: clip, clip-path, clip-rule
 
@@ -1258,22 +1200,9 @@ svg_parse_common_imp(fz_context *ctx, svg_document *doc, fz_xml *node, svg_state
 }
 
 static void
-svg_parse_common(fz_context *ctx, svg_document *doc, fz_xml *node, svg_state *state)
+svg_parse_font_attributes(fz_context *ctx, svg_document *doc, fz_xml *node, svg_state *state, char *buf, int buf_size)
 {
 	char *style_att = fz_xml_att(node, "style");
-	char *expanded = svg_style_with_classes(ctx, doc, node, style_att);
-
-	fz_try(ctx)
-		svg_parse_common_imp(ctx, doc, node, state, expanded ? expanded : style_att);
-	fz_always(ctx)
-		fz_free(ctx, expanded);
-	fz_catch(ctx)
-		fz_rethrow(ctx);
-}
-
-static void
-svg_parse_font_attributes_imp(fz_context *ctx, svg_document *doc, fz_xml *node, svg_state *state, char *buf, int buf_size, char *style_att)
-{
 	char *font_family_att = fz_xml_att(node, "font-family");
 	char *font_weight_att = fz_xml_att(node, "font-weight");
 	char *font_style_att = fz_xml_att(node, "font-style");
@@ -1332,20 +1261,6 @@ svg_parse_font_attributes_imp(fz_context *ctx, svg_document *doc, fz_xml *node, 
 }
 
 static void
-svg_parse_font_attributes(fz_context *ctx, svg_document *doc, fz_xml *node, svg_state *state, char *buf, int buf_size)
-{
-	char *style_att = fz_xml_att(node, "style");
-	char *expanded = svg_style_with_classes(ctx, doc, node, style_att);
-
-	fz_try(ctx)
-		svg_parse_font_attributes_imp(ctx, doc, node, state, buf, buf_size, expanded ? expanded : style_att);
-	fz_always(ctx)
-		fz_free(ctx, expanded);
-	fz_catch(ctx)
-		fz_rethrow(ctx);
-}
-
-static void
 svg_run_svg(fz_context *ctx, fz_device *dev, svg_document *doc, fz_xml *root, const svg_state *inherit_state)
 {
 	svg_state local_state;
@@ -1385,14 +1300,12 @@ svg_run_g(fz_context *ctx, fz_device *dev, svg_document *doc, fz_xml *root, cons
 {
 	svg_state local_state;
 	fz_xml *node;
-	/* SumatraPDF */
 	char font_family[100];
 
 	svg_begin_state(ctx, &local_state, inherit_state);
 	fz_try(ctx)
 	{
 		svg_parse_common(ctx, doc, root, &local_state);
-		/* SumatraPDF */
 		svg_parse_font_attributes(ctx, doc, root, &local_state, font_family, sizeof font_family);
 
 		for (node = fz_xml_down(root); node; node = fz_xml_next(node))
@@ -1898,7 +1811,7 @@ svg_run_document(fz_context *ctx, svg_document *doc, fz_xml *root, fz_device *de
 	state.viewbox_h = DEF_HEIGHT;
 	state.viewbox_size = sqrtf(DEF_WIDTH*DEF_WIDTH + DEF_HEIGHT*DEF_HEIGHT) / sqrtf(2);
 
-	state.fontsize = 12;
+	state.fontsize = DEF_FONTSIZE;
 
 	state.opacity = 1;
 

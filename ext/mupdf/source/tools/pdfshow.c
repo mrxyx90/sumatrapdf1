@@ -1,4 +1,4 @@
-// Copyright (C) 2004-2025 Artifex Software, Inc.
+// Copyright (C) 2004-2026 Artifex Software, Inc.
 //
 // This file is part of MuPDF.
 //
@@ -44,7 +44,7 @@ static int showcolumn;
 static int usage(void)
 {
 	fprintf(stderr,
-		"Usage: SumatraPDF show [options] file.pdf ( trailer | xref | pages | grep | outline | js | form | <path> ) *\n"
+		"usage: mutool show [options] file.pdf ( trailer | xref | pages | grep | outline | js | form | <path> ) *\n"
 		"\t-p -\tpassword\n"
 		"\t-o -\toutput file\n"
 		"\t-e\tleave stream contents in their original form\n"
@@ -674,6 +674,7 @@ int pdfshow_main(int argc, char **argv)
 
 	fz_var(doc);
 	fz_var(labels);
+
 	fz_try(ctx)
 	{
 		doc = pdf_open_document(ctx, filename);
