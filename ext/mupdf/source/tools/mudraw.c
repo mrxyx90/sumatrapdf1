@@ -52,6 +52,8 @@ int gettimeofday(struct timeval *tv, struct timezone *tz);
 #ifdef _WIN32
 #include <windows.h>
 #include <direct.h> /* for getcwd */
+#include <io.h>     /* SumatraPDF: for _open_osfhandle (stdin wiring) */
+#include <fcntl.h>  /* SumatraPDF: for _O_RDONLY */
 #else
 #include <sys/stat.h> /* for mkdir */
 #include <unistd.h> /* for getcwd */
@@ -2914,4 +2916,139 @@ int mudraw_main(int argc, char **argv)
 	}
 
 	return (errored != 0);
+}
+
+/* SumatraPDF: this must be in libmupdf.dll */
+// https://www.tillett.info/2013/05/13/how-to-create-a-windows-program-that-works-as-both-as-a-gui-and-console-application/
+// TODO: see if https://github.com/apenwarr/fixconsole/blob/master/fixconsole_windows.go would improve things
+
+#ifdef _WIN32
+
+static DWORD fz_file_type(HANDLE h)
+{
+	return (h != INVALID_HANDLE_VALUE) ? GetFileType(h) : FILE_TYPE_UNKNOWN;
+}
+
+static int fz_bind_stdin_to_handle(HANDLE hIn)
+{
+	int fd = _open_osfhandle((intptr_t)hIn, _O_RDONLY);
+	if (fd == -1)
+		return 0;
+	FILE* f = _fdopen(fd, "r");
+	if (!f)
+		return 0;
+	*stdin = *f;
+	setvbuf(stdin, NULL, _IONBF, 0);
+	return 1;
+}
+
+int fz_redirect_io_to_existing_console() {
+    FILE* con = NULL;
+    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+    HANDLE hErr = GetStdHandle(STD_ERROR_HANDLE);
+    HANDLE hIn = GetStdHandle(STD_INPUT_HANDLE);
+    // a stream redirected to a file (`> out.txt`) or pipe (`| more`) is already
+    // wired to the inherited OS handle. We must NOT freopen it to "CONOUT$" or
+    // the redirected output is lost (issue #5677); only console streams need
+    // re-binding to the parent console.
+    DWORD outType = fz_file_type(hOut);
+    DWORD errType = fz_file_type(hErr);
+    DWORD inType = fz_file_type(hIn);
+    BOOL outRedirected = (outType == FILE_TYPE_DISK || outType == FILE_TYPE_PIPE);
+    BOOL errRedirected = (errType == FILE_TYPE_DISK || errType == FILE_TYPE_PIPE);
+    BOOL inRedirected = (inType == FILE_TYPE_DISK || inType == FILE_TYPE_PIPE);
+
+    // only attach to the parent console if we actually need it for a stream
+    if (!outRedirected || !errRedirected || !inRedirected) {
+        AttachConsole(ATTACH_PARENT_PROCESS);
+	if (!outRedirected) {
+		hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+		outType = fz_file_type(hOut);
+		outRedirected = (outType == FILE_TYPE_DISK || outType == FILE_TYPE_PIPE);
+	}
+	if (!errRedirected) {
+		hErr = GetStdHandle(STD_ERROR_HANDLE);
+		errType = fz_file_type(hErr);
+		errRedirected = (errType == FILE_TYPE_DISK || errType == FILE_TYPE_PIPE);
+	}
+	if (!inRedirected) {
+		hIn = GetStdHandle(STD_INPUT_HANDLE);
+		inType = fz_file_type(hIn);
+		inRedirected = (inType == FILE_TYPE_DISK || inType == FILE_TYPE_PIPE);
+	}
+    }
+
+    if (outRedirected) {
+        setvbuf(stdout, NULL, _IONBF, 0);
+    } else if (hOut != INVALID_HANDLE_VALUE) {
+        freopen_s(&con, "CONOUT$", "w", stdout);
+        setvbuf(stdout, NULL, _IONBF, 0);
+    }
+    if (errRedirected) {
+        setvbuf(stderr, NULL, _IONBF, 0);
+    } else if (hErr != INVALID_HANDLE_VALUE) {
+        freopen_s(&con, "CONOUT$", "w", stderr);
+        setvbuf(stderr, NULL, _IONBF, 0);
+    }
+
+    // SumatraPDF: a GUI-subsystem app's CRT stdin isn't wired to the inherited
+    // handle, so `mutool run`'s readline() fails with "cannot read line from
+    // stdin" (issue #5665). Bind stdin to the pipe/file/console handle
+    // (`echo x | SumatraPDF run s.js`, or interactive `SumatraPDF run`).
+    if (hIn != INVALID_HANDLE_VALUE) {
+	inType = fz_file_type(hIn);
+	if (inType == FILE_TYPE_DISK || inType == FILE_TYPE_PIPE || inType == FILE_TYPE_CHAR) {
+		if (!fz_bind_stdin_to_handle(hIn))
+			freopen_s(&con, "CONIN$", "r", stdin);
+	} else {
+		freopen_s(&con, "CONIN$", "r", stdin);
+	}
+    } else {
+        freopen_s(&con, "CONIN$", "r", stdin);
+    }
+    return 1;
+}
+
+#else /* !_WIN32 */
+
+int fz_redirect_io_to_existing_console(void)
+{
+	return 0;
+}
+
+#endif /* _WIN32 */
+
+/* SumatraPDF: read one line for `mutool run` REPL / readline().
+ * On Windows console input, fgets(stdin) returns EOF spuriously (issue #5681);
+ * use ReadConsole instead. */
+int fz_console_readline(char *buf, size_t size)
+{
+#ifdef _WIN32
+	HANDLE hIn = GetStdHandle(STD_INPUT_HANDLE);
+	DWORD type = fz_file_type(hIn);
+
+	if (type == FILE_TYPE_CHAR && size > 1) {
+		DWORD read = 0;
+		DWORD mode;
+
+		if (!GetConsoleMode(hIn, &mode))
+			goto fallback;
+		SetConsoleMode(hIn, ENABLE_LINE_INPUT | ENABLE_PROCESSED_INPUT | (mode & ENABLE_ECHO_INPUT));
+		if (!ReadConsoleA(hIn, buf, (DWORD)(size - 1), &read, NULL))
+			return 0;
+		while (read > 0 && (buf[read - 1] == '\n' || buf[read - 1] == '\r'))
+			buf[--read] = 0;
+		buf[read] = 0;
+		return 1;
+	}
+fallback:
+#endif
+	if (!fgets(buf, (int)size, stdin))
+		return 0;
+	{
+		size_t n = strlen(buf);
+		if (n > 0 && buf[n - 1] == '\n')
+			buf[n - 1] = 0;
+	}
+	return 1;
 }

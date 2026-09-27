@@ -114,9 +114,6 @@
     <ClInclude Include="..\src\AIChatPanel.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\SearchPanel.h">
-      <Filter>src</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\Accelerators.h">
       <Filter>src</Filter>
     </ClInclude>
@@ -249,10 +246,10 @@
     <ClInclude Include="..\src\FindWindow.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\FloatingToolbar.h">
+    <ClInclude Include="..\src\Flags.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\Flags.h">
+    <ClInclude Include="..\src\FloatingToolbar.h">
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="..\src\FormFields.h">
@@ -394,6 +391,9 @@
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="..\src\SearchAndDDE.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\SearchPanel.h">
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="..\src\SelectTextKeyboard.h">
@@ -608,9 +608,6 @@
     <ClCompile Include="..\src\AIChatPanel.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\SearchPanel.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\AIClaudeCode.cpp">
       <Filter>src</Filter>
     </ClCompile>
@@ -794,10 +791,10 @@
     <ClCompile Include="..\src\FindWindow.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\FloatingToolbar.cpp">
+    <ClCompile Include="..\src\Flags.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\Flags.cpp">
+    <ClCompile Include="..\src\FloatingToolbar.cpp">
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\src\FormFields.cpp">
@@ -1017,6 +1014,9 @@
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\src\SearchAndDDE.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\SearchPanel.cpp">
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\src\SelectTextKeyboard.cpp">

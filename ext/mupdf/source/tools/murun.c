@@ -24,7 +24,7 @@
 
 #if FZ_ENABLE_PDF
 #include "mupdf/pdf.h"
-#include "mupdf/helpers/pkcs7-openssl.h"
+#include "pkcs7-windows.h"
 #endif
 
 #if FZ_ENABLE_JS
@@ -35,6 +35,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
+
+/* SumatraPDF: console line input for REPL (mudraw.c) */
+int fz_console_readline(char *buf, size_t size);
 
 #define PS1 "> "
 
@@ -191,12 +194,8 @@ static void jsB_read(js_State *J)
 static void jsB_readline(js_State *J)
 {
 	char line[256];
-	size_t n;
-	if (!fgets(line, sizeof line, stdin))
+	if (!fz_console_readline(line, sizeof line))
 		js_error(J, "cannot read line from stdin");
-	n = strlen(line);
-	if (n > 0 && line[n-1] == '\n')
-		line[n-1] = 0;
 	js_pushstring(J, line);
 }
 
@@ -11960,7 +11959,7 @@ static void ffi_PDFWidget_checkCertificate(js_State *J)
 	fz_var(verifier);
 	fz_try(ctx)
 	{
-		verifier = pkcs7_openssl_new_verifier(ctx);
+		verifier = pkcs7_windows_new_verifier(ctx);
 		val = pdf_check_widget_certificate(ctx, verifier, widget);
 	}
 	fz_always(ctx)
@@ -11979,7 +11978,7 @@ static void ffi_PDFWidget_checkDigest(js_State *J)
 	fz_var(verifier);
 	fz_try(ctx)
 	{
-		verifier = pkcs7_openssl_new_verifier(ctx);
+		verifier = pkcs7_windows_new_verifier(ctx);
 		val = pdf_check_widget_digest(ctx, verifier, widget);
 	}
 	fz_always(ctx)
@@ -12012,7 +12011,7 @@ static void ffi_PDFWidget_getSignatory(js_State *J)
 	fz_var(dn);
 	fz_try(ctx)
 	{
-		verifier = pkcs7_openssl_new_verifier(ctx);
+		verifier = pkcs7_windows_new_verifier(ctx);
 		dn = pdf_signature_get_widget_signatory(ctx, verifier, widget);
 		if (dn)
 		{
@@ -12325,7 +12324,7 @@ static void ffi_new_PDFPKCS7Signer(js_State *J)
 	{
 		fz_buffer *buf = ffi_tonewbuffer(J, 1);
 		fz_try(ctx)
-			signer = pkcs7_openssl_read_pfx_from_buffer(ctx, buf, password);
+			signer = pkcs7_windows_read_pfx_from_buffer(ctx, buf, password);
 		fz_always(ctx)
 			fz_drop_buffer(ctx, buf);
 		fz_catch(ctx)
@@ -12335,7 +12334,7 @@ static void ffi_new_PDFPKCS7Signer(js_State *J)
 	{
 		const char *filename = js_tostring(J, 1);
 		fz_try(ctx)
-			signer = pkcs7_openssl_read_pfx(ctx, filename, password);
+			signer = pkcs7_windows_read_pfx(ctx, filename, password);
 		fz_catch(ctx)
 			rethrow(J);
 	}
@@ -13599,7 +13598,7 @@ int murun_main(int argc, char **argv)
 	} else {
 		char line[256];
 		fputs(PS1, stdout);
-		while (fgets(line, sizeof line, stdin)) {
+		while (fz_console_readline(line, sizeof line)) {
 			eval_print(J, line);
 			fputs(PS1, stdout);
 		}

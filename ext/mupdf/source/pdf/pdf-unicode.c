@@ -125,6 +125,76 @@ pdf_remap_cmap(fz_context *ctx, pdf_cmap *gid_from_cpt, pdf_cmap *ucs_from_cpt)
 	return ucs_from_gid;
 }
 
+/* Recover a unicode value from glyph names that don't map via the Adobe Glyph
+ * List, mirroring the heuristics pdf.js uses in _simpleFontToUnicode():
+ *   "G" + 2 hex digits   -> that code point   (e.g. "G45" -> 'E')
+ *   "g" + 4 hex digits   -> that code point
+ *   "C"/"c" + 2..3 digits -> that decimal code point
+ * Some embedded subset fonts (e.g. MSTT*) name glyphs this way and ship no
+ * ToUnicode CMap; without this, their text extracts as U+FFFD and isn't
+ * searchable. Returns 0 if no heuristic applies. (issue #3219)
+ */
+static int
+unicode_from_coded_glyph_name(const char *name)
+{
+	size_t n = strlen(name);
+	char *end;
+	long code = 0;
+
+	if (name[0] == 'G' && n == 3)
+		code = strtol(name + 1, &end, 16);
+	else if (name[0] == 'g' && n == 5)
+		code = strtol(name + 1, &end, 16);
+	else if ((name[0] == 'C' || name[0] == 'c') && n >= 3 && n <= 4)
+		code = strtol(name + 1, &end, 10);
+	else
+		return 0;
+
+	if (*end != 0)
+		return 0;
+	if (code > 0 && code <= 0xffff)
+		return (int)code;
+	return 0;
+}
+
+/* Distiller Type1 ToUnicode is often identity Latin-1 even for CP1251
+ * faces that reuse Latin Encoding names. Treat the font as CP1251 when
+ * the name is a known family / has a Cyrillic tag, or the document
+ * title/author is Cyrillic. (issue #5873) */
+static int
+pdf_simple_font_looks_cp1251(fz_context *ctx, pdf_document *doc, pdf_font_desc *font)
+{
+	const char *name = font->font ? fz_font_name(ctx, font->font) : "";
+	char buf[1024];
+	int i, k;
+	static const char *keys[] = { FZ_META_INFO_TITLE, FZ_META_INFO_AUTHOR, NULL };
+
+	if (strlen(name) > 7 && name[6] == '+')
+		name += 7;
+
+	if (fz_strncasecmp(name, "literaturnaya", 13) == 0)
+		return 1;
+	/* "Academy" / "Academy-Bold", but not "AcademyEngraved". */
+	if (fz_strncasecmp(name, "academy", 7) == 0 && (name[7] == 0 || name[7] == '-'))
+		return 1;
+	for (i = 0; name[i]; i++)
+		if (fz_strncasecmp(name + i, "cyr", 3) == 0 || fz_strncasecmp(name + i, "1251", 4) == 0)
+			return 1;
+
+	if (!doc)
+		return 0;
+	for (k = 0; keys[k]; k++)
+	{
+		if (pdf_lookup_metadata(ctx, doc, keys[k], buf, sizeof buf) <= 0)
+			continue;
+		/* UTF-8 Cyrillic (U+0400-U+047F) starts with D0/D1. */
+		for (i = 0; buf[i]; i++)
+			if ((unsigned char)buf[i] == 0xD0 || (unsigned char)buf[i] == 0xD1)
+				return 1;
+	}
+	return 0;
+}
+
 void
 pdf_load_to_unicode(fz_context *ctx, pdf_document *doc, pdf_font_desc *font,
 	const char **strings, char *collection, pdf_obj *cmapstm)
@@ -170,6 +240,7 @@ pdf_load_to_unicode(fz_context *ctx, pdf_document *doc, pdf_font_desc *font,
 	if (strings)
 	{
 		/* TODO one-to-many mappings */
+		int n_high = 0, n_id = 0;
 
 		font->cid_to_ucs = Memento_label(fz_malloc_array(ctx, 256, unsigned short), "cid_to_ucs");
 		font->cid_to_ucs_len = 256;
@@ -178,9 +249,41 @@ pdf_load_to_unicode(fz_context *ctx, pdf_document *doc, pdf_font_desc *font,
 		for (cpt = 0; cpt < 256; cpt++)
 		{
 			if (strings[cpt])
-				font->cid_to_ucs[cpt] = fz_unicode_from_glyph_name(strings[cpt]);
+			{
+				int ucs = fz_unicode_from_glyph_name(strings[cpt]);
+				if (ucs == FZ_REPLACEMENT_CHARACTER)
+				{
+					int u2 = unicode_from_coded_glyph_name(strings[cpt]);
+					if (u2)
+						ucs = u2;
+				}
+				font->cid_to_ucs[cpt] = ucs;
+			}
 			else
 				font->cid_to_ucs[cpt] = FZ_REPLACEMENT_CHARACTER;
+
+			if (cpt >= 0xC0 && font->cid_to_ucs[cpt] != 0 &&
+				font->cid_to_ucs[cpt] != FZ_REPLACEMENT_CHARACTER)
+			{
+				n_high++;
+				if (font->cid_to_ucs[cpt] == cpt)
+					n_id++;
+			}
+		}
+
+		/* Encoding names mapped 0xC0-0xFF to U+00C0-U+00FF. Distiller's
+		 * ToUnicode does the same, which is wrong for CP1251 Type1 faces. */
+		if (n_high >= 32 && n_id * 4 >= n_high * 3 &&
+			pdf_simple_font_looks_cp1251(ctx, doc, font))
+		{
+			if (font->to_unicode)
+			{
+				font->size -= pdf_cmap_size(ctx, font->to_unicode);
+				pdf_drop_cmap(ctx, font->to_unicode);
+				font->to_unicode = NULL;
+			}
+			for (cpt = 0; cpt < 256; cpt++)
+				font->cid_to_ucs[cpt] = fz_unicode_from_windows_1251[cpt];
 		}
 	}
 
