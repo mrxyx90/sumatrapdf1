@@ -29,7 +29,6 @@
 #include "DocController.h"
 #include "Translations.h"
 
-constexpr const WCHAR* kFloatingToolbarClassName = L"SumatraFloatingToolbar";
 constexpr int kFloatingToolbarIconSize = 22;
 constexpr int kFloatingToolbarButtonSize = 38;
 constexpr int kFloatingToolbarMargin = 5;
@@ -39,7 +38,7 @@ constexpr int kFloatingToolbarSeparatorGap = 5;
 
 
 struct FloatingToolbarButton {
-    const char* icon = nullptr;
+    Str icon{};
     int cmdId = 0;
     Str tip{};
 };
@@ -48,13 +47,13 @@ static constexpr const char* kScreenshotIcon =
     "<svg viewBox=\"0 0 24 24\"><path fill=\"currentColor\" d=\"M9 3l-1.5 2H5c-1.1 0-2 .9-2 2v11c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2h-2.5L15 3H9zm3 5a5 5 0 1 1 0 10 5 5 0 0 1 0-10zm0 2a3 3 0 1 0 0 6 3 3 0 0 0 0-6z\"/></svg>";
 
 static const FloatingToolbarButton gButtons[] = {
-    {gIconCommandPalette, CmdCommandPalette, StrL("Command palette")},
+    {StrL(gIconCommandPalette), CmdCommandPalette, StrL("Command palette")},
     // Use the brush/highlighter glyph, not the selection-toolbar text-marking
     // glyph, so this button is visually the highlighter tool.
-    {gIconAnnotHighlightBrush, CmdAnnotationHighlightBrush, StrL("Highlight")},
-    {gIconAnnotInk, CmdCreateAnnotInk, StrL("Ink")},
-    {gIconAnnotFreeText, CmdCreateAnnotFreeText, StrL("Free text")},
-    {gIconEditAnnotations, CmdToggleEditPDF, StrL("Edit PDF")},
+    {StrL(gIconAnnotHighlightBrush), CmdAnnotationHighlightBrush, StrL("Highlight")},
+    {StrL(gIconAnnotInk), CmdCreateAnnotInk, StrL("Ink")},
+    {StrL(gIconAnnotFreeText), CmdCreateAnnotFreeText, StrL("Free text")},
+    {StrL(gIconEditAnnotations), CmdToggleEditPDF, StrL("Edit PDF")},
 };
 
 struct FloatingToolbar {
@@ -680,9 +679,9 @@ static void BuildFloatingToolbar(FloatingToolbar* tb) {
         button->sideLen = buttonSize;
         button->hoverBg = FloatingHover();
         button->toolbar = tb;
-        button->pixmap = GetCachedPixmapForSvg(Str(b.icon), iconSize, iconSize,
+        button->pixmap = GetCachedPixmapForSvg(b.icon, iconSize, iconSize,
                                                 ThemeWindowTextColor(), FloatingBg());
-        button->pixmapActive = GetCachedPixmapForSvg(Str(b.icon), iconSize, iconSize,
+        button->pixmapActive = GetCachedPixmapForSvg(b.icon, iconSize, iconSize,
                                                 kColWhite, MkRgb(0x3e, 0x53, 0x68));
         button->SetTooltip(b.tip);
         button->id = b.cmdId;
@@ -701,9 +700,9 @@ static void BuildFloatingToolbar(FloatingToolbar* tb) {
     screenshot->sideLen = buttonSize;
     screenshot->hoverBg = FloatingHover();
     screenshot->toolbar = tb;
-    screenshot->pixmap = GetCachedPixmapForSvg(Str(kScreenshotIcon), iconSize, iconSize,
+    screenshot->pixmap = GetCachedPixmapForSvg(StrL(kScreenshotIcon), iconSize, iconSize,
                                                 ThemeWindowTextColor(), FloatingBg());
-    screenshot->pixmapActive = GetCachedPixmapForSvg(Str(kScreenshotIcon), iconSize, iconSize,
+    screenshot->pixmapActive = GetCachedPixmapForSvg(StrL(kScreenshotIcon), iconSize, iconSize,
                                                 kColWhite, MkRgb(0x3e, 0x53, 0x68));
     screenshot->SetTooltip(StrL("Screenshot"));
     screenshot->id = CmdScreenshot;
@@ -741,7 +740,7 @@ void FloatingToolbarCreate(MainWindow* win) {
 
     VirtHost::CreateArgs args;
     args.parent = win->hwndFrame;
-    args.className = WStr(kFloatingToolbarClassName);
+    args.className = WStrL(L"SumatraFloatingToolbar");
     args.isPopup = true;
     args.visible = true;
     args.noActivate = true;
