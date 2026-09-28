@@ -1946,9 +1946,6 @@ static void GiveHoverButtonTooltipBack(MainWindow* win) {
 }
 
 void HideToolbarHoverDropdown(MainWindow* win) {
-    if (win && win->floatingToolbar) {
-        HideFloatingToolbarHoverDropdown(win->floatingToolbar);
-    }
     ToolbarVirt* tb = win ? win->toolbarVirt : nullptr;
     if (!tb) {
         return;

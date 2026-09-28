@@ -36,9 +36,7 @@ constexpr int kFloatingToolbarMargin = 5;
 constexpr int kFloatingToolbarGap = 2;
 constexpr int kFloatingToolbarRadius = 9;
 constexpr int kFloatingToolbarSeparatorGap = 5;
-// hover dropdown timer IDs
-constexpr int kFloatingToolbarOpenHoverDropdownTimerId = 0x201;
-constexpr int kFloatingToolbarCloseHoverDropdownTimerId = 0x202;
+
 
 struct FloatingToolbarButton {
     const char* icon = nullptr;
@@ -69,11 +67,6 @@ struct FloatingToolbar {
     Rect dragOrig;
     int activeCmdId = 0;
     bool screenshotAnimating = false;
-    // hover dropdown state
-    VirtHost* hoverHost = nullptr;
-    int hoverCmdId = 0;
-    int hoverPendingCmdId = 0;
-    VirtCtrl* hoverButton = nullptr;  // The button that triggered the hover
 };
 
 static Color FloatingBg() {
@@ -88,15 +81,11 @@ static Color FloatingHover() {
     return ThemeHotBackgroundColor();
 }
 
-void HideFloatingToolbarHoverDropdown(FloatingToolbar* tb);
-Rect GetFloatingToolbarButtonScreenRect(MainWindow* win, int cmdId);
-
 struct FloatingIconButton : VirtIconButton {
     int sideLen = 0;
     Color hoverBg = kColorUnset;
     FloatingToolbar* toolbar = nullptr;
     Pixmap* pixmapActive = nullptr;
-    bool wasHovered = false;  // Track previous hover state
 
     Size GetIdealSize() override {
         return {sideLen, sideLen};
@@ -107,42 +96,6 @@ struct FloatingIconButton : VirtIconButton {
         bool active = (toolbar && toolbar->activeCmdId == id) || paletteOpen;
         bool screenshotFlash = toolbar && toolbar->screenshotAnimating && id == CmdScreenshot;
         bool isHovered = IsEnabled() && HasFlag(vwfHovered);
-
-        // Detect hover state changes for annotation color commands
-        if (toolbar && toolbar->host && IsAnnotColorCmd(id)) {
-            if (isHovered && !wasHovered) {
-                // Mouse just entered this button
-                if (toolbar->hoverPendingCmdId != id) {
-                    // Kill any pending close timer when entering a new button
-                    toolbar->host->KillTimer(kFloatingToolbarCloseHoverDropdownTimerId);
-
-                    // If a different dropdown was open, close it immediately
-                    if (toolbar->hoverCmdId != 0 && toolbar->hoverCmdId != id) {
-                        HideFloatingToolbarHoverDropdown(toolbar);
-                    }
-
-                    toolbar->hoverPendingCmdId = id;
-                    toolbar->hoverButton = this;  // Store reference to this button
-
-                    // Kill any leftover open timer
-                    toolbar->host->KillTimer(kFloatingToolbarOpenHoverDropdownTimerId);
-                    // Start fresh timer for this button
-                    toolbar->host->SetTimer(kFloatingToolbarOpenHoverDropdownTimerId, UiTooltipDelayMs());
-                }
-            } else if (!isHovered && wasHovered) {
-                // Mouse just left this button
-                if (toolbar->hoverPendingCmdId == id) {
-                    toolbar->hoverPendingCmdId = 0;
-                    toolbar->hoverButton = nullptr;
-                    toolbar->host->KillTimer(kFloatingToolbarOpenHoverDropdownTimerId);
-                }
-                // If the hover dropdown is open for this button, set a timer to close it
-                if (toolbar->hoverCmdId == id) {
-                    toolbar->host->SetTimer(kFloatingToolbarCloseHoverDropdownTimerId, 150);
-                }
-            }
-        }
-        wasHovered = isHovered;
 
         // Paint hover first, then the selected state on top. This keeps the
         // hover feedback available without ever covering the selection state.
@@ -163,110 +116,7 @@ struct FloatingIconButton : VirtIconButton {
     }
 };
 
-void HideFloatingToolbarHoverDropdown(FloatingToolbar* tb) {
-    if (!tb) {
-        return;
-    }
-    if (tb->hoverHost) {
-        VirtHost* h = tb->hoverHost;
-        tb->hoverHost = nullptr;
-        delete h;
-    }
-    tb->hoverCmdId = 0;
-    tb->hoverPendingCmdId = 0;
-    tb->hoverButton = nullptr;
-    if (tb->host) {
-        tb->host->KillTimer(kFloatingToolbarOpenHoverDropdownTimerId);
-        tb->host->KillTimer(kFloatingToolbarCloseHoverDropdownTimerId);
-    }
-}
 
-static void OpenFloatingToolbarHoverDropdown(FloatingToolbar* tb, int cmdId, VirtCtrl* button) {
-    if (!tb || !tb->win || !tb->host || cmdId == 0 || !button) {
-        return;
-    }
-
-    // Create a temporary event to build the dropdown content
-    ToolbarHoverBuildEvent ev;
-    ev.win = tb->win;
-    ev.layout = nullptr;
-    ev.centerOnButton = false;
-
-    // Build the color menu
-    BuildAnnotColorsHoverMenuForCmd(tb->win, cmdId, &ev);
-
-    if (!ev.layout) {
-        return;
-    }
-
-    // Create a VirtHost for the dropdown
-    VirtHost::CreateArgs args;
-    args.parent = tb->win->hwndFrame;
-    args.className = WStrL(L"SumatraFloatingToolbarHoverMenu");
-    args.isPopup = true;
-    args.visible = false;
-    args.noActivate = true;
-    args.userData = tb->win;
-    args.bgColor = ThemeControlBackgroundColor();
-    args.isRtl = IsUIRtl();
-    args.initialSize = {100, 100};
-
-    VirtHost* host = VirtHost::Create(args);
-    if (!host) {
-        delete ev.layout;
-        return;
-    }
-
-    Size sz = host->SetLayoutSizedToContent(ev.layout);
-
-    // Get the button's bounds in window (floating toolbar client area) coordinates
-    Rect buttonInWindow = button->BoundsInWindow();
-
-    // Get the floating toolbar's screen position
-    Rect toolbarScreenRect = tb->host->ScreenRect();
-
-    // Convert button bounds from toolbar-relative to screen coordinates
-    Rect buttonScreenRect;
-    buttonScreenRect.x = toolbarScreenRect.x + buttonInWindow.x;
-    buttonScreenRect.y = toolbarScreenRect.y + buttonInWindow.y;
-    buttonScreenRect.dx = buttonInWindow.dx;
-    buttonScreenRect.dy = buttonInWindow.dy;
-
-    // Get the frame rect to determine if button is on left or right half of window
-    RECT frameRect{};
-    GetWindowRect(tb->win->hwndFrame, &frameRect);
-    int frameWidth = frameRect.right - frameRect.left;
-    int buttonCenterX = buttonScreenRect.x + buttonScreenRect.dx / 2;
-    int frameCenterX = frameRect.left + frameWidth / 2;
-
-    // Decide positioning based on which half of the window the button is in
-    int x;
-    if (buttonCenterX < frameCenterX) {
-        // Button is on left half, show dropdown to the right of the button
-        x = buttonScreenRect.x + buttonScreenRect.dx + DpiScale(6);
-    } else {
-        // Button is on right half, show dropdown to the left of the button
-        x = buttonScreenRect.x - sz.dx - DpiScale(6);
-    }
-
-    // Vertical position: centered alongside the button
-    int y = buttonScreenRect.y + ((buttonScreenRect.dy - sz.dy) / 2);
-
-    Rect r{x, y, sz.dx, sz.dy};
-    r = ShiftRectToWorkArea(r, tb->win->hwndFrame, true);
-    host->SetPos(r, true);
-
-    tb->hoverHost = host;
-    tb->hoverCmdId = cmdId;
-    tb->hoverPendingCmdId = 0;
-    tb->hoverButton = button;
-
-    // Kill any pending timers
-    if (tb->host) {
-        tb->host->KillTimer(kFloatingToolbarOpenHoverDropdownTimerId);
-        tb->host->KillTimer(kFloatingToolbarCloseHoverDropdownTimerId);
-    }
-}
 
 static void OnFloatingButton(FloatingToolbar* tb, VirtMouseEvent* ev) {
     if (!tb || !ev || !ev->target) {
@@ -276,9 +126,6 @@ static void OnFloatingButton(FloatingToolbar* tb, VirtMouseEvent* ev) {
     if (!cmd) {
         return;
     }
-
-    // Hide hover dropdown when a button is clicked
-    HideFloatingToolbarHoverDropdown(tb);
 
     if (cmd == CmdCommandPalette) {
         HwndPostCommand(tb->win->hwndFrame, cmd, 0);
@@ -386,14 +233,6 @@ static void OnFloatingButton(FloatingToolbar* tb, VirtMouseEvent* ev) {
         }
         ToolbarUpdateStateForWindow(tb->win, false);
         HwndSendCommand(tb->win->hwndFrame, cmd, 0);
-
-        if (IsAnnotColorCmd(cmd)) {
-            tb->hoverPendingCmdId = cmd;
-            tb->hoverButton = ev->target;
-            tb->host->KillTimer(kFloatingToolbarOpenHoverDropdownTimerId);
-            tb->host->SetTimer(kFloatingToolbarOpenHoverDropdownTimerId, UiTooltipDelayMs());
-        }
-
         return;
     }
 
@@ -546,31 +385,6 @@ static void OnFloatingNativeMsg(FloatingToolbar* tb, VirtHostNativeMsg* ev) {
             KillTimer(tb->host->native, 1);
             tb->screenshotAnimating = false;
             tb->host->Invalidate(false);
-            ev->didHandle = true;
-        } else if (ev->wp == kFloatingToolbarOpenHoverDropdownTimerId) {
-            tb->host->KillTimer(kFloatingToolbarOpenHoverDropdownTimerId);
-            int cmdId = tb->hoverPendingCmdId;
-            VirtCtrl* button = tb->hoverButton;
-            tb->hoverPendingCmdId = 0;
-            if (cmdId != 0 && button) {
-                OpenFloatingToolbarHoverDropdown(tb, cmdId, button);
-            }
-            ev->didHandle = true;
-        } else if (ev->wp == kFloatingToolbarCloseHoverDropdownTimerId) {
-            tb->host->KillTimer(kFloatingToolbarCloseHoverDropdownTimerId);
-            Point ptScreen = UiCursorScreenPos();
-            bool overPopup = tb->hoverHost && tb->hoverHost->ScreenRect().Contains(ptScreen);
-            bool overButton = false;
-            if (tb->hoverButton && tb->hoverCmdId != 0) {
-                Rect bRect = GetFloatingToolbarButtonScreenRect(tb->win, tb->hoverCmdId);
-                overButton = bRect.Contains(ptScreen);
-            }
-            if (overPopup || overButton) {
-                // Mouse is still on button or in popup window: keep open and check again soon
-                tb->host->SetTimer(kFloatingToolbarCloseHoverDropdownTimerId, 150);
-            } else if (tb->hoverPendingCmdId == 0) {
-                HideFloatingToolbarHoverDropdown(tb);
-            }
             ev->didHandle = true;
         }
         break;
@@ -969,8 +783,6 @@ void FloatingToolbarDestroy(MainWindow* win) {
         return;
     }
     auto* tb = win->floatingToolbar;
-    // Hide hover dropdown before destroying toolbar
-    HideFloatingToolbarHoverDropdown(tb);
     win->UnregisterOnWindowMoved(&win->floatingToolbarOnWindowMoved);
     delete tb->host;
     tb->host = nullptr;
@@ -1038,38 +850,4 @@ bool IsCursorOverFloatingToolbar(MainWindow* win) {
     HWND hwndUnderCursor = WindowFromPoint(ptScreen);
     HWND floatingHwnd = win->floatingToolbar->host->native;
     return hwndUnderCursor == floatingHwnd || IsChild(floatingHwnd, hwndUnderCursor);
-}
-
-static VirtCtrl* FindButtonInLayout(ILayout* layout, int cmdId) {
-    if (!layout) {
-        return nullptr;
-    }
-    if (VirtCtrl* vc = layout->AsVirtCtrl()) {
-        if (vc->id == cmdId) {
-            return vc;
-        }
-    }
-    int count = layout->LayoutChildCount();
-    for (int i = 0; i < count; i++) {
-        if (VirtCtrl* found = FindButtonInLayout(layout->LayoutChildAt(i), cmdId)) {
-            return found;
-        }
-    }
-    return nullptr;
-}
-
-Rect GetFloatingToolbarButtonScreenRect(MainWindow* win, int cmdId) {
-    if (!win || !win->floatingToolbar || !win->floatingToolbar->host) {
-        return {};
-    }
-    FloatingToolbar* tb = win->floatingToolbar;
-    VirtHost* host = tb->host;
-    if (!host || !host->vroot) {
-        return {};
-    }
-    VirtCtrl* btn = FindButtonInLayout(host->vroot->owned, cmdId);
-    if (!btn) {
-        return {};
-    }
-    return host->ToScreen(btn->lastBounds);
 }

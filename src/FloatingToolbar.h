@@ -12,4 +12,3 @@ void FloatingToolbarUpdateTheme();
 void UpdateFloatingToolbarActiveState(MainWindow*);
 void UpdateFloatingToolbarPageText(MainWindow*);
 bool IsCursorOverFloatingToolbar(MainWindow*);
-void HideFloatingToolbarHoverDropdown(FloatingToolbar*);
