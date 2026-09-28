@@ -603,7 +603,7 @@ struct FloatingPageWidget : VirtButton {
         onMouseEnter = MkMethod0<VirtButton, &VirtButton::OnMouseEnter>(this);
         onMouseLeave = MkMethod0<VirtButton, &VirtButton::OnMouseLeave>(this);
         align = VirtTextAlign::Center;
-        SetTooltip(Tr("Go to Page"));
+        SetTooltip(StrL("Go to Page"));
     }
 
     Size GetIdealSize() override {
@@ -705,7 +705,7 @@ static void BuildFloatingToolbar(FloatingToolbar* tb) {
                                                 ThemeWindowTextColor(), FloatingBg());
     screenshot->pixmapActive = GetCachedPixmapForSvg(Str(kScreenshotIcon), iconSize, iconSize,
                                                 kColWhite, MkRgb(0x3e, 0x53, 0x68));
-    screenshot->SetTooltip(Tr("Screenshot"));
+    screenshot->SetTooltip(StrL("Screenshot"));
     screenshot->id = CmdScreenshot;
     screenshot->onClick = MkFunc1(OnFloatingButton, tb);
     box->AddChild(screenshot);
