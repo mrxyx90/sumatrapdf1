@@ -41,20 +41,20 @@ constexpr int kFloatingToolbarSeparatorGap = 5;
 struct FloatingToolbarButton {
     const char* icon = nullptr;
     int cmdId = 0;
-    const char* tip = nullptr;
+    Str tip{};
 };
 
 static constexpr const char* kScreenshotIcon =
     "<svg viewBox=\"0 0 24 24\"><path fill=\"currentColor\" d=\"M9 3l-1.5 2H5c-1.1 0-2 .9-2 2v11c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2h-2.5L15 3H9zm3 5a5 5 0 1 1 0 10 5 5 0 0 1 0-10zm0 2a3 3 0 1 0 0 6 3 3 0 0 0 0-6z\"/></svg>";
 
 static const FloatingToolbarButton gButtons[] = {
-    {gIconCommandPalette, CmdCommandPalette, "Command palette"},
+    {gIconCommandPalette, CmdCommandPalette, StrL("Command palette")},
     // Use the brush/highlighter glyph, not the selection-toolbar text-marking
     // glyph, so this button is visually the highlighter tool.
-    {gIconAnnotHighlightBrush, CmdAnnotationHighlightBrush, "Highlight"},
-    {gIconAnnotInk, CmdCreateAnnotInk, "Ink"},
-    {gIconAnnotFreeText, CmdCreateAnnotFreeText, "Free text"},
-    {gIconEditAnnotations, CmdToggleEditPDF, "Edit PDF"},
+    {gIconAnnotHighlightBrush, CmdAnnotationHighlightBrush, StrL("Highlight")},
+    {gIconAnnotInk, CmdCreateAnnotInk, StrL("Ink")},
+    {gIconAnnotFreeText, CmdCreateAnnotFreeText, StrL("Free text")},
+    {gIconEditAnnotations, CmdToggleEditPDF, StrL("Edit PDF")},
 };
 
 struct FloatingToolbar {
@@ -684,7 +684,7 @@ static void BuildFloatingToolbar(FloatingToolbar* tb) {
                                                 ThemeWindowTextColor(), FloatingBg());
         button->pixmapActive = GetCachedPixmapForSvg(Str(b.icon), iconSize, iconSize,
                                                 kColWhite, MkRgb(0x3e, 0x53, 0x68));
-        button->SetTooltip(Str(b.tip));
+        button->SetTooltip(b.tip);
         button->id = b.cmdId;
         button->onClick = MkFunc1(OnFloatingButton, tb);
         box->AddChild(button);
@@ -705,7 +705,7 @@ static void BuildFloatingToolbar(FloatingToolbar* tb) {
                                                 ThemeWindowTextColor(), FloatingBg());
     screenshot->pixmapActive = GetCachedPixmapForSvg(Str(kScreenshotIcon), iconSize, iconSize,
                                                 kColWhite, MkRgb(0x3e, 0x53, 0x68));
-    screenshot->SetTooltip(StrL("Screenshot"));
+    screenshot->SetTooltip(Tr("Screenshot"));
     screenshot->id = CmdScreenshot;
     screenshot->onClick = MkFunc1(OnFloatingButton, tb);
     box->AddChild(screenshot);
