@@ -4261,6 +4261,10 @@ static Vec<LoadDocumentAsyncData*> gLoadQueue;
 static bool gLoadQueueDispatchPosted = false;
 static UINT_PTR gLoadingMessageTimer = 0;
 
+bool AreLoadThreadsActive() {
+    return gLoadThreadsActive > 0;
+}
+
 bool HasPendingDocumentLoads() {
     if (gLoadThreadsActive > 0 || len(gLoadQueue) > 0) {
         return true;
@@ -4382,6 +4386,10 @@ static void OnLoadDocumentThreadFinished() {
     gLoadThreadsActive--;
     ReportIf(gLoadThreadsActive < 0);
     DispatchQueuedDocumentLoads();
+    if (gLoadThreadsActive == 0) {
+        auto fn = MkFunc0Void(ReloadDeferredSettings);
+        uitask::Post(fn, "ReloadDeferredSettings");
+    }
 }
 
 // true if targetTab still wants this load (path not replaced by a newer open)

@@ -147,10 +147,13 @@ import { testit as showChaptersInEbooks } from "./show-chapters-in-ebooks.ts";
 import { testit as embeddedImageAttachment } from "./embedded-image-attachment.ts";
 import { testit as ttsEngineCrashRecovery } from "./tts-engine-crash-recovery.ts";
 import { testit as readAloudCloseDuringSpeak } from "./read-aloud-close-during-speak.ts";
+import { testit as readAloudRestyleStalePage } from "./read-aloud-restyle-stale-page.ts";
+import { testit as readAloudLazyChapters } from "./read-aloud-lazy-chapters.ts";
 import { testit as lazyTabStateAfterSave } from "./lazy-tab-state-after-save.ts";
 import { testit as lazyTabSelectPaint } from "./lazy-tab-select-paint.ts";
 import { testit as pendingTabFreedSessionState } from "./pending-tab-freed-session-state.ts";
 import { testit as closeTabDuringPlacement } from "./close-tab-during-placement.ts";
+import { testit as toggleZoomFailedTab } from "./toggle-zoom-failed-tab.ts";
 import { testit as restoreChmMissingTab } from "./restore-chm-missing-tab.ts";
 import { testit as issue5943 } from "./issue-5943.ts";
 import { testit as issue6117 } from "./issue-6117.ts";
@@ -394,10 +397,13 @@ export const tests: NamedTest[] = [
   ["embedded-image-attachment", embeddedImageAttachment],
   ["tts-engine-crash-recovery", ttsEngineCrashRecovery],
   ["read-aloud-close-during-speak", readAloudCloseDuringSpeak],
+  ["read-aloud-restyle-stale-page", readAloudRestyleStalePage],
+  ["read-aloud-lazy-chapters", readAloudLazyChapters],
   ["lazy-tab-state-after-save", lazyTabStateAfterSave],
   ["lazy-tab-select-paint", lazyTabSelectPaint],
   ["pending-tab-freed-session-state", pendingTabFreedSessionState],
   ["close-tab-during-placement", closeTabDuringPlacement],
+  ["toggle-zoom-failed-tab", toggleZoomFailedTab],
   ["restore-chm-missing-tab", restoreChmMissingTab],
   ["issue-4705", issue4705],
   ["toc-tree-sent-click", tocTreeSentClick],
