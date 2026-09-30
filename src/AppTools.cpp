@@ -23,11 +23,6 @@ static bool HasBeenInstalled() {
         str::JoinTemp(StrL("Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\"), StrL(kAppName));
     TempStr installedPath = LoggedReadRegStr2Temp(regPathUninst, StrL("InstallLocation"));
     if (len(installedPath) == 0) {
-        regPathUninst =
-            str::JoinTemp(StrL("Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\"), StrL("SumatraPDF"));
-        installedPath = LoggedReadRegStr2Temp(regPathUninst, StrL("InstallLocation"));
-    }
-    if (len(installedPath) == 0) {
         return false;
     }
 
