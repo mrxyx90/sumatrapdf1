@@ -1580,7 +1580,7 @@ static void OnInstallationFinished(Flags* cli) {
     DeleteWnd(&gWnd->btnInstall);
     DeleteWnd(&gWnd->progressBar);
     auto isRtl = IsUIRtl();
-    if (!cli->fastInstall) {
+    if (!cli->installer.fastInstall) {
         gWnd->btnRunSumatra = CreateDefaultButton(gWnd->hwnd, fmt(Tr("Start %s").s, StrL(kAppName)), isRtl);
         gWnd->btnRunSumatra->onClick = MkFunc0Void(OnButtonStartSumatra);
     }

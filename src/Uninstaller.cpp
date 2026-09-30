@@ -103,7 +103,7 @@ static void RemoveInstallDirFromPath(bool allUsers, Str installDir) {
 }
 
 static void RemoveInstalledFiles() {
-    Str dir = gCli->installDir;
+    Str dir = gCli->installer.installDir;
     if (len(dir) == 0) {
         log(StrL("RemoveInstalledFiles(): dir is empty\n"));
         return;
