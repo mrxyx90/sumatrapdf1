@@ -1461,6 +1461,7 @@
     <ClInclude Include="..\src\MarkdownModel.h" />
     <ClInclude Include="..\src\MarkdownToc.h" />
     <ClInclude Include="..\src\Menu.h" />
+    <ClInclude Include="..\src\MergePdf.h" />
     <ClInclude Include="..\src\MobiDoc.h" />
     <ClInclude Include="..\src\NavFilesInFolder.h" />
     <ClInclude Include="..\src\Notifications.h" />
@@ -1468,6 +1469,7 @@
     <ClInclude Include="..\src\PagePosition.h" />
     <ClInclude Include="..\src\PageRenderPolicy.h" />
     <ClInclude Include="..\src\PageRenderService.h" />
+    <ClInclude Include="..\src\PageThumbnails.h" />
     <ClInclude Include="..\src\PalmDbReader.h" />
     <ClInclude Include="..\src\PdfCad.h" />
     <ClInclude Include="..\src\PdfCreator.h" />
@@ -1498,6 +1500,7 @@
     <ClInclude Include="..\src\SelectionTranslate.h" />
     <ClInclude Include="..\src\Settings.h" />
     <ClInclude Include="..\src\ShortcutParse.h" />
+    <ClInclude Include="..\src\SidebarPanel.h" />
     <ClInclude Include="..\src\SimpleBrowserWindow.h" />
     <ClInclude Include="..\src\StressTesting.h" />
     <ClInclude Include="..\src\SumatraControl.h" />
@@ -1637,6 +1640,7 @@
     <ClCompile Include="..\src\EngineCreate.cpp" />
     <ClCompile Include="..\src\EngineDjvuDec.cpp" />
     <ClCompile Include="..\src\EngineDump.cpp" />
+    <ClCompile Include="..\src\EngineDvi.cpp" />
     <ClCompile Include="..\src\EngineEbook.cpp" />
     <ClCompile Include="..\src\EngineImages.cpp" />
     <ClCompile Include="..\src\EngineMupdf.cpp">
@@ -1684,6 +1688,7 @@
     <ClCompile Include="..\src\MarkdownModel.cpp" />
     <ClCompile Include="..\src\MarkdownToc.cpp" />
     <ClCompile Include="..\src\Menu.cpp" />
+    <ClCompile Include="..\src\MergePdf.cpp" />
     <ClCompile Include="..\src\MobiDoc.cpp" />
     <ClCompile Include="..\src\NavFilesInFolder.cpp" />
     <ClCompile Include="..\src\Notifications.cpp" />
@@ -1692,6 +1697,7 @@
     <ClCompile Include="..\src\PagePosition.cpp" />
     <ClCompile Include="..\src\PageRenderPolicy.cpp" />
     <ClCompile Include="..\src\PageRenderService.cpp" />
+    <ClCompile Include="..\src\PageThumbnails.cpp" />
     <ClCompile Include="..\src\PalmDbReader.cpp" />
     <ClCompile Include="..\src\PdfCad.cpp" />
     <ClCompile Include="..\src\PdfCreator.cpp" />
@@ -1739,8 +1745,10 @@
     <ClCompile Include="..\src\SelectionHandlers.cpp" />
     <ClCompile Include="..\src\SelectionToolbar.cpp" />
     <ClCompile Include="..\src\SelectionTranslate.cpp" />
+    <ClCompile Include="..\src\Settings.cpp" />
     <ClCompile Include="..\src\SettingsDialog.cpp" />
     <ClCompile Include="..\src\ShortcutParse.cpp" />
+    <ClCompile Include="..\src\SidebarPanel.cpp" />
     <ClCompile Include="..\src\SignDocumentDialog.cpp" />
     <ClCompile Include="..\src\SimpleBrowserWindow.cpp" />
     <ClCompile Include="..\src\StressTesting.cpp" />

@@ -252,6 +252,7 @@ export const WM_KEYDOWN = 0x0100;
 export const WM_KEYUP = 0x0101;
 export const WM_CHAR = 0x0102;
 export const WM_MOUSEMOVE = 0x0200;
+export const WM_MOUSELEAVE = 0x02a3;
 export const WM_LBUTTONDOWN = 0x0201;
 export const WM_LBUTTONUP = 0x0202;
 export const WM_LBUTTONDBLCLK = 0x0203;
@@ -285,6 +286,7 @@ export const VK_RMENU = 0xa5;
 export const VK_RETURN = 0x0d;
 export const VK_ESCAPE = 0x1b;
 export const VK_SPACE = 0x20;
+export const VK_NEXT = 0x22;
 export const VK_END = 0x23;
 export const VK_HOME = 0x24;
 export const VK_LEFT = 0x25;
@@ -1122,8 +1124,13 @@ export function readWindowDCRow(hwnd: number, x: number, y: number, count: numbe
 // them back as BGRA bytes (4 per pixel, top-down). Unlike GetPixel on a window
 // DC this works for occluded / background windows, and unlike captureWindowToPng
 // it needs no PNG decoder to assert on what was painted.
-export function captureWindowPixels(hwnd: number): { w: number; h: number; data: Uint8Array } | null {
-  const rc = getClientRect(hwnd);
+// "window" includes the non-client area, even parts off the screen (a
+// maximized window's borders hang over the monitor's edges).
+export function captureWindowPixels(
+  hwnd: number,
+  area: "client" | "window" = "client",
+): { w: number; h: number; data: Uint8Array } | null {
+  const rc = area === "client" ? getClientRect(hwnd) : getWindowRect(hwnd);
   const w = rc.right - rc.left;
   const h = rc.bottom - rc.top;
   if (w <= 0 || h <= 0) {
@@ -1148,7 +1155,8 @@ export function captureWindowPixels(hwnd: number): { w: number; h: number; data:
     return null;
   }
   const oldObj = gdi32.symbols.SelectObject(memDC, bmp);
-  user32.symbols.PrintWindow(hwnd, memDC, PW_CLIENTONLY | PW_RENDERFULLCONTENT);
+  const flags = area === "client" ? PW_CLIENTONLY | PW_RENDERFULLCONTENT : PW_RENDERFULLCONTENT;
+  user32.symbols.PrintWindow(hwnd, memDC, flags);
   gdi32.symbols.SelectObject(memDC, oldObj);
 
   // bun wants the pointer as a number, not the bigint CreateDIBSection wrote

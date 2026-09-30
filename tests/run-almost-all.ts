@@ -122,6 +122,17 @@ import { testit as issue6225 } from "./issue-6225.ts";
 import { testit as issue6229 } from "./issue-6229.ts";
 import { testit as issue6245 } from "./issue-6245.ts";
 import { testit as issue6244 } from "./issue-6244.ts";
+import { testit as issue6246 } from "./issue-6246.ts";
+import { testit as issue6247 } from "./issue-6247.ts";
+import { testit as issue6250 } from "./issue-6250.ts";
+import { testit as issue6252 } from "./issue-6252.ts";
+import { testit as installerDesktopShortcut } from "./installer-desktop-shortcut.ts";
+import { testit as issue6248 } from "./issue-6248.ts";
+import { testit as issue6256 } from "./issue-6256.ts";
+import { testit as annotNudge } from "./annot-nudge.ts";
+import { testit as textSnippets } from "./text-snippets.ts";
+import { testit as signWithImage } from "./sign-with-image.ts";
+import { testit as alwaysShowSidebar } from "./always-show-sidebar.ts";
 import { testit as ghsaP2ph2rvmQ37m } from "./security-ghsa-p2ph-2rvm-q37m.ts";
 import { testit as issue4753 } from "./issue-4753.ts";
 import { testit as issue4055 } from "./issue-4055.ts";
@@ -255,6 +266,13 @@ import { testit as imageOnlyPaletteItems } from "./image-only-palette-items.ts";
 import { testit as commandPaletteShortcutFilter } from "./command-palette-shortcut-filter.ts";
 import { testit as commandPaletteAltNames } from "./command-palette-alt-names.ts";
 import { testit as commandPaletteThumbnails } from "./command-palette-thumbnails.ts";
+import { testit as sidebarThumbnails } from "./sidebar-thumbnails.ts";
+import { testit as sidebarThumbnailsWheel } from "./sidebar-thumbnails-wheel.ts";
+import { testit as sidebarThumbnailsClose } from "./sidebar-thumbnails-close.ts";
+import { testit as issue6070 } from "./issue-6070.ts";
+import { testit as wheelWhileClosing } from "./wheel-while-closing.ts";
+import { testit as issue6259 } from "./issue-6259.ts";
+import { testit as issue6261 } from "./issue-6261.ts";
 import { testit as commandPaletteAnnotations } from "./command-palette-annotations.ts";
 import { testit as paletteDeleteAnnotation } from "./palette-delete-annotation.ts";
 import { testit as paletteCommandAvailability } from "./palette-command-availability.ts";
@@ -360,6 +378,9 @@ export const tests: NamedTest[] = [
   // first: it drives the home page, whose thumbnail selection follows the
   // mouse, so it is the one test that cares what the machine was doing before
   ["issue-5978", issue5978],
+  ["annot-contents-click-away", annotContentsClickAway],
+  ["toolbar-hover-dropdown", toolbarHoverDropdown],
+  ["lint-mingw-sources", lintMingwSources],
   ["issue-2799", issue2799],
   ["ink-thickness", inkThickness],
   ["ink-annotation-placement", inkAnnotationPlacement],
@@ -379,6 +400,17 @@ export const tests: NamedTest[] = [
   ["issue-6229", issue6229],
   ["issue-6245", issue6245],
   ["issue-6244", issue6244],
+  ["issue-6246", issue6246],
+  ["issue-6247", issue6247],
+  ["issue-6250", issue6250],
+  ["issue-6252", issue6252],
+  ["installer-desktop-shortcut", installerDesktopShortcut],
+  ["issue-6248", issue6248],
+  ["issue-6256", issue6256],
+  ["annot-nudge", annotNudge],
+  ["text-snippets", textSnippets],
+  ["sign-with-image", signWithImage],
+  ["always-show-sidebar", alwaysShowSidebar],
   ["issue-6133", issue6133],
   ["issue-6184", issue6184],
   ["image-only-palette-items", imageOnlyPaletteItems],
@@ -411,8 +443,6 @@ export const tests: NamedTest[] = [
   ["issue-6137", issue6137],
   ["free-text-edit-matches-render", freeTextEditMatchesRender],
   ["free-text-in-place-edit", freeTextInPlaceEdit],
-  ["lint-mingw-sources", lintMingwSources],
-  ["toolbar-hover-dropdown", toolbarHoverDropdown],
   ["issue-6103", issue6103],
   ["issue-6062", issue6062],
   ["issue-6101", issue6101],
@@ -567,7 +597,6 @@ export const tests: NamedTest[] = [
   ["issue-6050", issue6050],
   ["issue-5911", issue5911],
   ["issue-6088", issue6088],
-  ["annot-contents-click-away", annotContentsClickAway],
   ["annot-color-dropdown", annotColorDropdown],
   ["issue-6137-contents", issue6137Contents],
   ["issue-6093", issue6093],
@@ -623,6 +652,13 @@ export const tests: NamedTest[] = [
   ["command-palette-shortcut-filter", commandPaletteShortcutFilter],
   ["command-palette-alt-names", commandPaletteAltNames],
   ["command-palette-thumbnails", commandPaletteThumbnails],
+  ["sidebar-thumbnails", sidebarThumbnails],
+  ["sidebar-thumbnails-wheel", sidebarThumbnailsWheel],
+  ["sidebar-thumbnails-close", sidebarThumbnailsClose],
+  ["issue-6070", issue6070],
+  ["wheel-while-closing", wheelWhileClosing],
+  ["issue-6259", issue6259],
+  ["issue-6261", issue6261],
   ["command-palette-annotations", commandPaletteAnnotations],
   ["palette-delete-annotation", paletteDeleteAnnotation],
   ["palette-command-availability", paletteCommandAvailability],

@@ -306,6 +306,9 @@
     <ClInclude Include="..\src\Menu.h">
       <Filter>src</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\MergePdf.h">
+      <Filter>src</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\MobiDoc.h">
       <Filter>src</Filter>
     </ClInclude>
@@ -325,6 +328,9 @@
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="..\src\PageRenderService.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\PageThumbnails.h">
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="..\src\PalmDbReader.h">
@@ -415,6 +421,9 @@
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="..\src\ShortcutParse.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\SidebarPanel.h">
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="..\src\SimpleBrowserWindow.h">
@@ -746,6 +755,9 @@
     <ClCompile Include="..\src\EngineDump.cpp">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\EngineDvi.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\EngineEbook.cpp">
       <Filter>src</Filter>
     </ClCompile>
@@ -866,6 +878,9 @@
     <ClCompile Include="..\src\Menu.cpp">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\MergePdf.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\MobiDoc.cpp">
       <Filter>src</Filter>
     </ClCompile>
@@ -888,6 +903,9 @@
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\src\PageRenderService.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\PageThumbnails.cpp">
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\src\PalmDbReader.cpp">
@@ -1031,10 +1049,16 @@
     <ClCompile Include="..\src\SelectionTranslate.cpp">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\Settings.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\SettingsDialog.cpp">
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\src\ShortcutParse.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\SidebarPanel.cpp">
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\src\SignDocumentDialog.cpp">

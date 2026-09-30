@@ -163,7 +163,7 @@ enum class SidebarResizeFrame {
     Keep,
     Adjust
 };
-void SetSidebarVisibility(MainWindow* win, bool tocVisible, bool showFavorites,
+void SetSidebarVisibility(MainWindow* win, bool topVisible, bool bottomVisible,
                           SidebarResizeFrame = SidebarResizeFrame::Keep);
 void RememberFavTreeExpansionState(MainWindow* win);
 void AdvanceFocus(MainWindow* win);
@@ -349,6 +349,8 @@ void SwitchToDisplayMode(MainWindow* win, DisplayMode displayMode, bool keepCont
 void OnDocumentVerticalScrollIntent(MainWindow* win, bool down);
 void DismissNextFileScrollHint(MainWindow* win);
 void MainWindowRerender(MainWindow* win, bool includeNonClientArea = false);
+void GetFrameNcStrips(MainWindow*, Vec<Rect>& out);
+EngineBase* CreatePdfEngineForDialog(Str path, HWND hwnd);
 
 TempStr PageInfoOverlayResultTemp(Str pathTwoPages, Str pathOnePage, int* exitCodeOut = nullptr);
 TempStr WindowStateDuringLoadResultTemp(int* exitCodeOut = nullptr);

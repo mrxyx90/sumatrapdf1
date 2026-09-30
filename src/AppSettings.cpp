@@ -15,7 +15,6 @@
 
 #include "gui/UIModels.h"
 
-#define INCLUDE_SETTINGSSTRUCTS_METADATA
 #include "Settings.h"
 #include "Commands.h"
 #include "DisplayMode.h"
@@ -283,6 +282,19 @@ static void CreateSelectionHandlerCommands() {
     }
 }
 
+// a command per TextSnippets entry, for the context menu, the palette and its Key
+static void CreateTextSnippetCommands() {
+    for (TextSnippet* ts : *gSettings->textSnippets) {
+        if (!ts || str::IsEmptyOrWhiteSpace(ts->name) || str::IsEmptyOrWhiteSpace(ts->text)) {
+            continue;
+        }
+        // settings values are single-line: \n in Text is a line break
+        TempStr text = str::ReplaceTemp(ts->text, StrL("\\n"), StrL("\n"));
+        CommandArg* args = NewStringArg(kCmdArgText, text);
+        CreateCustomCommand(StrL(""), CmdInsertTextSnippet, args, ts->name, ts->key);
+    }
+}
+
 static void CreateExternalViewersCommands() {
     for (ExternalViewer* ev : *gSettings->externalViewers) {
         if (!ev || str::IsEmptyOrWhiteSpace(ev->commandLine)) {
@@ -424,6 +436,7 @@ TabState* CloneTabState(const TabState* src) {
     dst->rotation = src->rotation;
     dst->scrollPos = src->scrollPos;
     dst->showToc = src->showToc;
+    str::ReplaceWithCopy(&dst->sidebarView, src->sidebarView);
     dst->tocState = new Vec<int>(*src->tocState);
     return dst;
 }
@@ -552,6 +565,7 @@ static void RememberSessionState() {
             FileState* fs = NewFileState(fp);
             tab->ctrl->GetDisplayState(fs);
             fs->showToc = tab->showToc;
+            str::ReplaceWithCopy(&fs->sidebarView, SidebarViewToStr(tab->sidebarView));
             *fs->tocState = tab->tocState;
             TabState* ts = NewTabState(fs);
             VecAppend(*windowState->tabStates, ts);
@@ -876,6 +890,7 @@ bool LoadSettings() {
     CreateThemeCommands();
     CreateExternalViewersCommands();
     CreateSelectionHandlerCommands();
+    CreateTextSnippetCommands();
     CreateCustomShortcuts();
 
     // re-create accelerators
@@ -1775,6 +1790,7 @@ TabState* NewTabState(FileState* fs) {
     state->rotation = fs->rotation;
     state->scrollPos = fs->scrollPos;
     state->showToc = fs->showToc;
+    str::ReplaceWithCopy(&state->sidebarView, fs->sidebarView);
     *state->tocState = *fs->tocState;
     return state;
 }

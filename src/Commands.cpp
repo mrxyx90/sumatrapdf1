@@ -334,6 +334,10 @@ static SeqStrings gCommandNames =
     "CmdOpenFileWithSumatraFilePicker\0"
     "CmdSelectCurrentPage\0"
     "CmdZoomFitVisible\0"
+    "CmdSignWithImage\0"
+    "CmdInsertTextSnippet\0"
+    "CmdToggleThumbnails\0"
+    "CmdMergePDF\0"
     "\0";
 
 static i32 gCommandIds[] = {
@@ -657,6 +661,10 @@ static i32 gCommandIds[] = {
     CmdOpenFileWithSumatraFilePicker,
     CmdSelectCurrentPage,
     CmdZoomFitVisible,
+    CmdSignWithImage,
+    CmdInsertTextSnippet,
+    CmdToggleThumbnails,
+    CmdMergePDF,
 };
 
 SeqStrings gCommandDescriptions =
@@ -980,6 +988,10 @@ SeqStrings gCommandDescriptions =
     "Open File With SumatraPDF File Picker...\0"
     "Select Current Page\0"
     "Zoom: Fit Visible\0"
+    "Sign With Image\0"
+    "Insert Text Snippet\0"
+    "Toggle Thumbnails\0"
+    "Merge PDF...\0"
     "\0";
 
 SeqStrings gCommandAltDescs =
@@ -1048,6 +1060,7 @@ static const ArgSpec argSpecs[] = {
     {CmdTogglePresentationMode, kCmdArgState, CommandArg::Type::Bool}, // default
     {CmdToggleBookmarks, kCmdArgState, CommandArg::Type::Bool},        // default
     {CmdToggleTableOfContents, kCmdArgState, CommandArg::Type::Bool},  // default
+    {CmdToggleThumbnails, kCmdArgState, CommandArg::Type::Bool},       // default
 
     // default string is the setting name, e.g. [CmdToggleBoolSetting Fullscreen.ShowMenubar]
     {CmdToggleBoolSetting, kCmdArgName, CommandArg::Type::String}, // default

@@ -85,6 +85,17 @@ struct SelectionHandler {
     Str toolbarSvgIcon;
 };
 
+// predefined text inserted as a free text annotation from the context
+// menu or the command palette
+struct TextSnippet {
+    // name shown in the context menu and the command palette
+    Str name;
+    // text of the free text annotation it inserts; \n starts a new line
+    Str text;
+    // keyboard shortcut
+    Str key;
+};
+
 // list of additional external viewers for various file types. See [docs
 // for more
 // information](https://www.sumatrapdfreader.org/docs/Customize-external-viewers)
@@ -268,6 +279,9 @@ struct FileState {
     // hex encoded MD5 fingerprint of the file content (32 chars) followed
     // by the crypt key (64 chars); only applies to PDF documents
     Str decryptionKey;
+    // what the sidebar's top panel shows: bookmarks (the default),
+    // thumbnails or favorites
+    Str sidebarView;
     // how pages are laid out for this document. The string is the
     // persisted form of DisplayModel::displayMode, so it's parsed after
     // deserialization and written back before serialization
@@ -352,6 +366,9 @@ struct TabState {
     // if true, the table of contents was shown when the document was
     // closed
     bool showToc;
+    // what the sidebar's top panel showed: bookmarks, thumbnails or
+    // favorites
+    Str sidebarView;
     // which table of contents items were expanded (see FileStates ->
     // TocState)
     Vec<int>* tocState;
@@ -760,6 +777,10 @@ struct Annotations {
     // Windows user name is used; set it to (none) to leave the author out
     // entirely
     Str defaultAuthor;
+    // image (e.g. a transparent .png of your signature) that Sign With
+    // Image stamps on the page. If not set, or the file is missing, Sign
+    // With Image asks for an image
+    Str signatureImage;
 };
 
 // reading bar (View menu): a horizontal band on the page to keep your
@@ -795,6 +816,9 @@ struct HtmlUI {
 
 // Preferences are persisted in SumatraPDF-settings.txt
 struct Settings {
+    // what the sidebar's bottom panel shows: favorites (the default),
+    // bookmarks or thumbnails
+    Str sidebarBottomView;
     // if true, a PDF without an outline gets a table of contents built
     // from numbered headings in its text (Generate Table Of Contents
     // command does it on demand)
@@ -803,6 +827,9 @@ struct Settings {
     // selection is active. See [docs for more
     // information](https://www.sumatrapdfreader.org/docs/Customize-search-translation-services)
     Vec<SelectionHandler*>* selectionHandlers;
+    // predefined text inserted as a free text annotation from the context
+    // menu or the command palette
+    Vec<TextSnippet*>* textSnippets;
     // zoom levels which zooming steps through in addition to Fit Page and
     // Fit Width. The largest value is also the highest zoom that can be
     // set at all, so listing levels above 6400 (up to 1000000) is how you
@@ -1054,7 +1081,8 @@ struct Settings {
     // Options, so a double-click in the document can jump to the matching
     // line in a LaTeX editor
     bool enableTeXEnhancements;
-    // if true, Esc key closes SumatraPDF
+    // if true, Esc key closes SumatraPDF. In presentation or fullscreen
+    // mode, Esc leaves that mode first
     bool escToExit;
     // if true, show the full path to the document in the title bar
     bool fullPathInTitle;
@@ -1108,7 +1136,8 @@ struct Settings {
     // if true, the find UI is a floating, movable window with a results
     // list instead of the compact toolbar overlay
     bool searchUIFloating;
-    // if true, show the Favorites sidebar
+    // if true, show the sidebar's bottom panel: Favorites, unless
+    // SidebarBottomView says otherwise
     bool showFavorites;
     // if true, favorites within each file are sorted alphabetically by
     // name (or page label); if false (the default), they are sorted by
@@ -1117,6 +1146,9 @@ struct Settings {
     // if true, show the table of contents (Bookmarks) sidebar when the
     // document has one
     bool showToc;
+    // if true, every document with bookmarks opens with the Bookmarks
+    // sidebar, even one that was closed with it hidden
+    bool alwaysShowSidebar;
     // if true, put the bookmarks / favorites sidebar on the right of the
     // window (left is the default; right-to-left UI languages already put
     // it on the right)
@@ -1248,6 +1280,19 @@ struct Themes {
     Vec<Theme*>* themes;
 };
 
+// NOLINTEND(modernize-use-designated-initializers)
+
+// (de)serialization metadata, defined in Settings.cpp
+struct FieldInfo;
+struct StructInfo;
+extern const StructInfo gFavoriteInfo;
+extern const StructInfo gFileEBookUIInfo;
+extern const FieldInfo gFileStateFields[26];
+extern StructInfo gFileStateInfo;
+extern const StructInfo gTabStateInfo;
+extern const StructInfo gSessionDataInfo;
+extern const StructInfo gSettingsInfo;
+extern const StructInfo gThemesInfo;
 #ifdef INCLUDE_SETTINGSSTRUCTS_METADATA
 
 static const FieldInfo gReadingBarFields[] = {
