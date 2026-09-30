@@ -46,7 +46,7 @@ const char* gInstalledFiles[] = {
     "PdfFilter.dll",
     "PdfPreview.dll",
     // those probably won't delete because in use
-    "Apdf.exe",
+    "SumatraPDF.exe",
     "RA-MICRO PDF Viewer.exe",
     // files no longer shipped, to be deleted
     "libmupdf.dll", // renamed to libsumatrapdf.dll in 3.7
@@ -55,8 +55,8 @@ const char* gInstalledFiles[] = {
     "UnRar.dll",
     "UnRar64.dll",
     // other files we might generate
-    "apdfprefs.dat",
-    "Apdf-settings.txt",
+    "sumatrapdfprefs.dat",
+    "SumatraPDF-settings.txt",
 };
 // clang-format on
 #endif
@@ -109,9 +109,9 @@ static void RemoveInstalledFiles() {
         return;
     }
     static const Str kFiles[] = {
-        Str(kExeName), StrL("libsumatrapdf.dll"), StrL("PdfFilter.dll"),
-        StrL("PdfPreview.dll"), StrL("libmupdf.dll"), StrL("uninstall.exe"),
-        StrL("Apdf-Uninstaller.exe")
+        StrL("Apdf.exe"), StrL("SumatraPDF.exe"), StrL("libsumatrapdf.dll"),
+        StrL("PdfFilter.dll"), StrL("PdfPreview.dll"), StrL("libmupdf.dll"),
+        StrL("uninstall.exe"), StrL("Apdf-Uninstaller.exe"), StrL("Sumatra-Uninstaller.exe")
     };
     for (Str f : kFiles) {
         TempStr p = path::JoinTemp(dir, f);
@@ -134,8 +134,16 @@ static void UninstallerThread() {
     // a DELETE_ON_CLOSE copy from the temp directory
     TempStr exePath = GetInstalledExePathTemp();
     TempStr ownPath = GetSelfExePathTemp();
-    if (file::Exists(exePath) && !path::IsSame(exePath, ownPath)) {
+    if (!path::IsSame(exePath, ownPath)) {
         KillProcessesWithModule(exePath, true);
+    }
+    TempStr apdfExe = path::JoinTemp(gCli->installDir, StrL("Apdf.exe"));
+    if (file::Exists(apdfExe) && !path::IsSame(apdfExe, ownPath)) {
+        KillProcessesWithModule(apdfExe, true);
+    }
+    TempStr sumatraExe = path::JoinTemp(gCli->installDir, StrL("SumatraPDF.exe"));
+    if (file::Exists(sumatraExe) && !path::IsSame(sumatraExe, ownPath)) {
+        KillProcessesWithModule(sumatraExe, true);
     }
 
     // TODO: reconsider what is failure
@@ -159,6 +167,8 @@ static void UninstallerThread() {
     RemoveInstalledFiles();
     LoggedDeleteRegValue(HKEY_CURRENT_USER, StrL("Software\\Microsoft\\Windows\\CurrentVersion\\Run"),
                          StrL("Apdf-QuickLook"));
+    LoggedDeleteRegValue(HKEY_CURRENT_USER, StrL("Software\\Microsoft\\Windows\\CurrentVersion\\Run"),
+                         StrL("SumatraPDF-QuickLook"));
 
     // always succeed, even for partial uninstallations
     success = true;

@@ -42,7 +42,15 @@ TempStr GetThumbnailPathTemp(Str filePath) {
 }
 
 TempStr GetThumbnailCacheDirTemp() {
-    return GetPathInAppDataDirTemp(StrL("apdfcache"));
+    TempStr dir = GetPathInAppDataDirTemp(StrL("apdfcache"));
+    if (dir::Exists(dir)) {
+        return dir;
+    }
+    TempStr legacyDir = GetPathInAppDataDirTemp(StrL("sumatrapdfcache"));
+    if (dir::Exists(legacyDir)) {
+        return legacyDir;
+    }
+    return dir;
 }
 
 // Empty rather than remove: SaveThumbnail runs on the UI thread and re-creates

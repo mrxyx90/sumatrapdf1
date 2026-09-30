@@ -372,9 +372,12 @@ bool RemoveUninstallerRegistryInfo(HKEY hkey) {
     logf("RemoveUninstallerRegistryInfo(%s)\n", RegKeyNameTemp(hkey));
     TempStr regPathUninst = GetRegPathUninstTemp(StrL(kAppName));
     bool ok1 = LoggedDeleteRegKey(hkey, regPathUninst);
+    TempStr legacyRegPathUninst = GetRegPathUninstTemp(StrL("SumatraPDF"));
+    LoggedDeleteRegKey(hkey, legacyRegPathUninst);
 
     TempStr key = str::JoinTemp(StrL("Software\\"), StrL(kAppName));
     bool ok2 = LoggedDeleteRegKey(hkey, key);
+    LoggedDeleteRegKey(hkey, StrL("Software\\SumatraPDF"));
     return ok1 && ok2;
 }
 
