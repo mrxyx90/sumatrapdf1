@@ -372,21 +372,9 @@ bool RemoveUninstallerRegistryInfo(HKEY hkey) {
     logf("RemoveUninstallerRegistryInfo(%s)\n", RegKeyNameTemp(hkey));
     TempStr regPathUninst = GetRegPathUninstTemp(StrL(kAppName));
     bool ok1 = LoggedDeleteRegKey(hkey, regPathUninst);
-    LoggedDeleteRegKey(hkey, StrL("Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\SumatraPDF"));
-
-    if (hkey == HKEY_LOCAL_MACHINE) {
-        LoggedDeleteRegKey(hkey, StrL("Software\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Apdf"));
-        LoggedDeleteRegKey(hkey, StrL("Software\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\SumatraPDF"));
-        LoggedDeleteRegValue(hkey, StrL("Software\\WOW6432Node\\RegisteredApplications"), StrL(kAppName));
-        LoggedDeleteRegValue(hkey, StrL("Software\\WOW6432Node\\RegisteredApplications"), StrL("SumatraPDF"));
-    }
-
-    LoggedDeleteRegValue(hkey, StrL("Software\\RegisteredApplications"), StrL(kAppName));
-    LoggedDeleteRegValue(hkey, StrL("Software\\RegisteredApplications"), StrL("SumatraPDF"));
 
     TempStr key = str::JoinTemp(StrL("Software\\"), StrL(kAppName));
     bool ok2 = LoggedDeleteRegKey(hkey, key);
-    LoggedDeleteRegKey(hkey, StrL("Software\\SumatraPDF"));
     return ok1 && ok2;
 }
 

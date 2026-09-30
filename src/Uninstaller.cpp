@@ -108,6 +108,17 @@ static void RemoveInstalledFiles() {
         log(StrL("RemoveInstalledFiles(): dir is empty\n"));
         return;
     }
+    static const Str kFiles[] = {
+        Str(kExeName), StrL("libsumatrapdf.dll"), StrL("PdfFilter.dll"),
+        StrL("PdfPreview.dll"), StrL("libmupdf.dll"), StrL("uninstall.exe"),
+        StrL("Apdf-Uninstaller.exe")
+    };
+    for (Str f : kFiles) {
+        TempStr p = path::JoinTemp(dir, f);
+        if (file::Exists(p)) {
+            file::Delete(p);
+        }
+    }
     bool ok = dir::RemoveAll(dir);
     logf("RemoveInstalledFiles(): removed dir '%s', ok = %d\n", dir, (int)ok);
 }
