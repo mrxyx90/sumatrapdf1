@@ -27,7 +27,6 @@
 #include "base/GdiPlusUtil.h"
 #include "SumatraPDF.h"
 #include "SumatraConfig.h"
-#include "Version.h"
 #include "MainWindow.h"
 #include "WindowTab.h"
 #include "Translations.h"
@@ -1195,7 +1194,7 @@ static bool ConvertImageCollectionToPdf(EngineBase* engine, Str destPath) {
         return false;
     }
 
-    TempStr producer = fmt("%s %s", StrL(kAppName), currentVersion);
+    TempStr producer = fmt("SumatraPDF %s", currentVersion);
     PdfCreator::SetProducerName(producer);
     // Formats PDF cannot re-wrap (WebP, JXL, HEIC, AVIF, TGA, …): decode via
     // the same codecs we use for viewing, then PNG + zopfli before embed.

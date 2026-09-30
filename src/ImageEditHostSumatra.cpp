@@ -16,7 +16,6 @@
 
 #include "ImageReader.h"
 #include "SumatraConfig.h"
-#include "Version.h"
 #include "Settings.h"
 #include "AppSettings.h"
 #include "DocProperties.h"
@@ -82,7 +81,7 @@ static bool SaveBitmapAsPdf(Bitmap* bmp, Str destPath) {
         TempStr now = FormatPdfDateTemp();
         c->SetProperty(DocProp::CreationDate, now);
         c->SetProperty(DocProp::ModificationDate, now);
-        c->SetProperty(DocProp::CreatorApp, StrL(kAppName));
+        c->SetProperty(DocProp::CreatorApp, StrL("SumatraPDF"));
         ok = c->SaveToFile(destPath);
     }
     delete c;

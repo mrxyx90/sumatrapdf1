@@ -927,7 +927,7 @@ SeqStrings gCommandDescriptions =
     "Toggle Show Images\0"
     "Select Text With Keyboard\0"
     "Open File With Windows File Picker...\0"
-    "Apdf File Picker\0"
+    "SumatraPDF File Picker\0"
     "Toggle Boolean Setting\0"
     "Fix Default App For Extension\0"
     "Antigravity chat...\0"

@@ -221,15 +221,7 @@ static int cmpFloat(const float* a, const float* b) {
 }
 
 TempStr GetSettingsFileNameTemp() {
-    TempStr apdfPath = GetPathInAppDataDirTemp(StrL("Apdf-settings.txt"));
-    if (file::Exists(apdfPath)) {
-        return str::DupTemp(StrL("Apdf-settings.txt"));
-    }
-    TempStr sumatraPath = GetPathInAppDataDirTemp(StrL("SumatraPDF-settings.txt"));
-    if (file::Exists(sumatraPath)) {
-        return str::DupTemp(StrL("SumatraPDF-settings.txt"));
-    }
-    return str::DupTemp(StrL("Apdf-settings.txt"));
+    return str::DupTemp(StrL("SumatraPDF-settings.txt"));
 }
 
 // this could be virtual path when running in app store

@@ -235,10 +235,10 @@ static AboutRow gAboutRows[] = {
     // isn't known until runtime (32/64-bit, debug)
     {StrL("version"), {}, {}},
     {StrL("built on"), StrL(__DATE__ " " __TIME__), {}},
-    {StrL("manual"), StrL("Apdf manual"), StrL("https://www.sumatrapdfreader.org/docs/SumatraPDF-documentation")},
+    {StrL("manual"), StrL("SumatraPDF manual"), StrL("https://www.sumatrapdfreader.org/docs/SumatraPDF-documentation")},
     {StrL("version history"), StrL("What's new"), StrL("https://www.sumatrapdfreader.org/docs/Version-history")},
-    {StrL("website"), StrL("Apdf website"), Str(kWebsiteURL)},
-    {StrL("forums"), StrL("Apdf forums"), StrL("https://github.com/sumatrapdfreader/sumatrapdf/discussions")},
+    {StrL("website"), StrL("SumatraPDF website"), Str(kWebsiteURL)},
+    {StrL("forums"), StrL("SumatraPDF forums"), StrL("https://github.com/sumatrapdfreader/sumatrapdf/discussions")},
     {StrL("licenses"), StrL("Various Open Source"),
      StrL("https://github.com/sumatrapdfreader/sumatrapdf/blob/master/AUTHORS")},
 #ifdef GIT_COMMIT_ID_STR
@@ -588,7 +588,7 @@ void AboutCtrl::UpdateLayout(Rect clientRc) {
 
 // Version, OS, WebView2, memory and similar facts for a bug report.
 static void AppendBugReportInfo(str::Builder& s) {
-    s.Append(fmt("%s %s\n", StrL(kAppName), GetAppVersionTemp()));
+    s.Append(fmt("SumatraPDF %s\n", GetAppVersionTemp()));
     s.Append(fmt("Built on: %s %s\n", StrL(__DATE__), StrL(__TIME__)));
     if (gitCommidId) {
         s.Append(fmt("Git: %s\n", gitCommidId));

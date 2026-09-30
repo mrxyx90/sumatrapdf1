@@ -744,7 +744,7 @@ static bool ShowMoveAsideBlockedDialog(Str path, Str copyPath, Str fileName) {
     }
     cfg.cbSize = sizeof(cfg);
     cfg.hwndParent = gWnd ? gWnd->hwnd : nullptr;
-    cfg.pszWindowTitle = CWStrTemp(StrL(kAppName));
+    cfg.pszWindowTitle = L"SumatraPDF";
     cfg.pszMainInstruction = CWStrTemp(fmt(Tr("Cannot update %s").s, fileName));
     cfg.pszContent = CWStrTemp(content);
     cfg.dwFlags = (TASKDIALOG_FLAGS)flags;
@@ -879,7 +879,7 @@ static bool PrepareInstallDirByRenaming(Str installDir, bool silent, bool skipEx
 static void DeleteInstallCopyLeftovers(Str destDir) {
     static const Str kCopies[] = {
         StrL("libsumatrapdf.dll.copy"), StrL("libmupdf.dll.copy"),   StrL("PdfFilter.dll.copy"),
-        StrL("PdfPreview.dll.copy"),    StrL("Apdf.exe.copy"),        StrL("SumatraPDF.exe.copy"),
+        StrL("PdfPreview.dll.copy"),    StrL("SumatraPDF.exe.copy"),
     };
     for (Str name : kCopies) {
         TempStr copyPath = path::JoinTemp(destDir, name);
@@ -903,7 +903,7 @@ static void DeleteInstallCopyLeftovers(Str destDir) {
 static void RestoreInstallCopyFiles(Str installDir) {
     logf("RestoreInstallCopyFiles('%s')\n", installDir);
     static const Str kFiles[] = {
-        Str(kExeName), StrL("SumatraPDF.exe"), StrL("libsumatrapdf.dll"), StrL("PdfFilter.dll"),
+        StrL("SumatraPDF.exe"), StrL("libsumatrapdf.dll"), StrL("PdfFilter.dll"),
         StrL("PdfPreview.dll"), StrL("libmupdf.dll"),
     };
     for (Str name : kFiles) {
@@ -1506,7 +1506,7 @@ static HRESULT CALLBACK InstallationFailedDialogCallback(HWND /*hwnd*/, UINT msg
         case TDN_BUTTON_CLICKED:
             if ((int)wParam == kBtnIdShowInstallLog) {
                 Str logText = gLogBuf ? ToStr(*gLogBuf) : StrL("(no log available)");
-                ShowTextInWindowDialog(fmt("%s installation log", StrL(kAppName)), logText);
+                ShowTextInWindowDialog(Tr("SumatraPDF installation log"), logText);
                 return S_FALSE; // keep TaskDialog open
             }
             break;
@@ -1536,7 +1536,7 @@ static void ShowInstallationFailedUi(HWND hwndParent) {
     }
     dialogConfig.cbSize = sizeof(TASKDIALOGCONFIG);
     dialogConfig.hwndParent = hwndParent;
-    dialogConfig.pszWindowTitle = CWStrTemp(StrL(kAppName));
+    dialogConfig.pszWindowTitle = L"SumatraPDF";
     dialogConfig.pszMainInstruction = L"Installation failed";
     dialogConfig.pszContent = CWStrTemp(content);
     dialogConfig.nDefaultButton = IDOK;
@@ -2071,7 +2071,7 @@ static bool CreateInstallerWnd(Flags* cli) {
         RegisterClassExW(&wcex);
     }
 
-    TempStr title = fmt(Tr("%s %s Installer").s, StrL(kAppName), StrL(CURR_VERSION_STRA));
+    TempStr title = fmt(Tr("SumatraPDF %s Installer").s, StrL(CURR_VERSION_STRA));
     DWORD exStyle = 0;
     if (trans::IsCurrLangRtl()) {
         exStyle = WS_EX_LAYOUTRTL;

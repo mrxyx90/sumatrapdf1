@@ -537,7 +537,7 @@ void OpenSearchSelectionInSidebar(MainWindow* win, Str engineName, Str url) {
         webView->events.historyChanged = OnWebSearchHistoryChanged;
         TempStr localAppData = GetSpecialFolderTemp(CSIDL_LOCAL_APPDATA);
         TempStr safeName = str::ReplaceTemp(engineName, StrL(" "), StrL("_"));
-        webView->dataDir = str::Dup(fmt("%s\\Apdf\\Search_%s", localAppData, safeName));
+        webView->dataDir = str::Dup(fmt("%s\\SumatraPDF\\Search_%s", localAppData, safeName));
         webView->allowClipboardRead = false;
         webView->defaultBackgroundColor = kColWhite;
         webView->forwardAppAccelerators = true;
@@ -630,7 +630,7 @@ void OpenSearchSelectionInPopup(MainWindow* win, Str engineName, Str url) {
     }
 
     TempStr localAppData = GetSpecialFolderTemp(CSIDL_LOCAL_APPDATA);
-    TempStr profileDir = path::JoinTemp(localAppData, StrL("Apdf\\EdgeSearchProfile"));
+    TempStr profileDir = path::JoinTemp(localAppData, StrL("SumatraPDF\\EdgeSearchProfile"));
 
     TempStr params = fmt("--app=\"%s\" --user-data-dir=\"%s\" --window-size=%d,%d --window-position=%d,%d",
                          url, profileDir, w, h, x, y);

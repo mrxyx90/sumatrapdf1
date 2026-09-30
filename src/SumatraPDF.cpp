@@ -153,8 +153,8 @@ constexpr const WCHAR* kCanvasClassName = L"SUMATRA_PDF_CANVAS";
 
 constexpr const char* kRestrictionsFileName = "sumatrapdfrestrict.ini";
 
-constexpr const char* kSumatraWindowTitle = kAppName;
-constexpr const WCHAR* kSumatraWindowTitleW = TEXT(kAppName);
+constexpr const char* kSumatraWindowTitle = "Apdf";
+constexpr const WCHAR* kSumatraWindowTitleW = L"Apdf";
 
 // used to show it in debug, but is not very useful,
 // so always disable
@@ -10478,7 +10478,7 @@ TempStr GetSumatraDataDirTemp() {
     if (len(dir) == 0) {
         return {};
     }
-    return path::JoinTemp(dir, StrL("Apdf-data"));
+    return path::JoinTemp(dir, StrL("SumatraPDF-data"));
 }
 
 TempStr GetSumatraBuildSpecificDirTemp() {

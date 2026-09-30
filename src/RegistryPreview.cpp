@@ -7,7 +7,6 @@
 #include "base/Crypto.h"
 
 #include "RegistryPreview.h"
-#include "Version.h"
 #include "SumatraLog.h"
 
 #define kThumbnailProviderClsid "{e357fccd-a995-4576-b01f-234630154e96}"
@@ -55,7 +54,7 @@ bool InstallPreviewDll(Str dllPath, bool allUsers) {
         Str ext2 = prev.ext2;
         ok = true;
 
-        TempStr displayName = fmt("%s Preview (*%s)", StrL(kAppName), ext);
+        TempStr displayName = fmt("SumatraPDF Preview (*%s)", ext);
         // register class
         TempStr key = fmt("Software\\Classes\\CLSID\\%s", clsid);
         ok &= LoggedWriteRegStr(hkey, key, {}, displayName);
@@ -193,7 +192,7 @@ TempStr GetPdfPreviewLogDirTemp() {
     if (len(exeDir) == 0) {
         return {};
     }
-    TempStr exePath = path::JoinTemp(exeDir, StrL(kExeName));
+    TempStr exePath = path::JoinTemp(exeDir, StrL("SumatraPDF.exe"));
     Str d = file::ReadFile(exePath);
     if (len(d) == 0) {
         return {};
@@ -209,7 +208,7 @@ TempStr GetPdfPreviewLogDirTemp() {
     if (len(local) == 0) {
         return {};
     }
-    TempStr dir = path::JoinTemp(local, StrL("Apdf-data"));
+    TempStr dir = path::JoinTemp(local, StrL("SumatraPDF-data"));
     return path::JoinTemp(dir, Str(id));
 }
 
