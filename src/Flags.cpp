@@ -9,6 +9,7 @@
 #include "DisplayMode.h"
 #include "Print.h"
 #include "Translations.h"
+#include "Version.h"
 #include "Flags.h"
 #include "SumatraLog.h"
 
@@ -91,7 +92,7 @@ void ShowPrintersDialog(bool consoleOnly) {
         }
     }
     if (!consoleOnly) {
-        ShowTextInWindowDialog(Tr("SumatraPDF - Show Printers"), ToStr(out));
+        ShowTextInWindowDialog(fmt("%s - Show Printers", StrL(kAppName)), ToStr(out));
     }
 }
 

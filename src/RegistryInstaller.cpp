@@ -17,7 +17,7 @@
 // list of supported file extensions for which SumatraPDF.exe will
 // be registered as a candidate for the Open With dialog's suggestions
 // clang-format off
-static SeqStrings gSupportedExts = 
+static SeqStrings gSupportedExts =
     ".pdf\0.xps\0.oxps\0.cbz\0.cbr\0.cb7\0.cbt\0" \
     ".djvu\0.chm\0.mobi\0.epub\0.md\0.markdown\0.svg\0.azw\0.azw3\0.azw4\0" \
     ".fb2\0.fb2z\0.prc\0.tif\0.tiff\0.jp2\0.png\0" \
@@ -149,7 +149,7 @@ static bool RegisterForDefaultPrograms(HKEY hkey, Str installedExePath) {
     // L"SOFTWARE\\SumatraPDF\\Capabilities"
     TempStr appCapabilityPath = str::JoinTemp(StrL("SOFTWARE\\"), StrL(kAppName), StrL("\\Capabilities"));
 
-    Str desc = StrL("SumatraPDF is a PDF reader.");
+    Str desc = fmt("%s is a PDF reader.", StrL(kAppName));
     ok &= LoggedWriteRegStr(hkey, appCapabilityPath, StrL("ApplicationDescription"), desc);
     // ApplicationName must match the RegisteredApplications value name (kAppName).
     ok &= LoggedWriteRegStr(hkey, appCapabilityPath, StrL("ApplicationName"), StrL(kAppName));
@@ -372,7 +372,14 @@ bool RemoveUninstallerRegistryInfo(HKEY hkey) {
     logf("RemoveUninstallerRegistryInfo(%s)\n", RegKeyNameTemp(hkey));
     TempStr regPathUninst = GetRegPathUninstTemp(StrL(kAppName));
     bool ok1 = LoggedDeleteRegKey(hkey, regPathUninst);
-    // legacy, this key was added by installers up to version 1.8
+
+    if (hkey == HKEY_LOCAL_MACHINE) {
+        LoggedDeleteRegKey(hkey, StrL("Software\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Apdf"));
+        LoggedDeleteRegValue(hkey, StrL("Software\\WOW6432Node\\RegisteredApplications"), StrL(kAppName));
+    }
+
+    LoggedDeleteRegValue(hkey, StrL("Software\\RegisteredApplications"), StrL(kAppName));
+
     TempStr key = str::JoinTemp(StrL("Software\\"), StrL(kAppName));
     bool ok2 = LoggedDeleteRegKey(hkey, key);
     return ok1 && ok2;

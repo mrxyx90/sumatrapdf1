@@ -53,7 +53,7 @@ const PRESETS = "#80ff0000 #00ff00";
 // ink's own colors, with the alpha it paints them at
 const INK_PRESETS = "#66ff0000 #4000ff00";
 // Annotations.InkColors when not set; the first is the default ink color
-const INK_DEFAULT_PRESETS = "#66ffff00* #668bf05d #6699defa #66f199d2 #66e24745";
+const INK_DEFAULT_PRESETS = "#0000ff* #8bf05d #99defa #f199d2 #e24745";
 const COLOR_DIALOG_TITLE = "Annotation Colors";
 const PICKED_COLOR = "#ff0000";
 const PICKED_OPACITY = 0x80;
@@ -616,8 +616,8 @@ async function testCurrentColorAdded(): Promise<void> {
       ["CmdCreateAnnotSquare", `${PRESETS} #123456 #ff0000*`],
       // the highlighter makes highlights, in HighlightColor (yellow)
       ["CmdAnnotationHighlightBrush", `${PRESETS} #123456 #ff0000 #ffff00*`],
-      // ink has colors of its own, translucent; its default 40% yellow joins them
-      ["CmdCreateAnnotInk", `${INK_PRESETS} #66ffff00*`],
+      // ink has colors of its own; its default deep blue joins them
+      ["CmdCreateAnnotInk", `${INK_PRESETS} #0000ff*`],
     ] as const) {
       const b = (await annotButtonRect(client, cmdId(name)))!;
       rightClickToolbar(toolbar, b.x + (b.dx >> 1), b.y + (b.dy >> 1));

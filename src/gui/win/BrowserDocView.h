@@ -73,6 +73,10 @@ class BrowserDocView {
     // (-1, -1) means "not known yet". The IE backend reads scroll state
     // synchronously instead and doesn't use this.
     Point webviewScrollPos = Point(-1, -1);
+    // True after a completed external navigation. While an external page is
+    // displayed, ordinary http(s) links can stay entirely inside WebView2
+    // without re-entering the CHM navigation callback.
+    bool externalPage = false;
     Str virtualHost;
     WStr virtualHostW;
 

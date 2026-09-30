@@ -221,7 +221,7 @@ static int cmpFloat(const float* a, const float* b) {
 }
 
 TempStr GetSettingsFileNameTemp() {
-    return str::DupTemp(StrL("SumatraPDF-settings.txt"));
+    return str::DupTemp(StrL("Apdf-settings.txt"));
 }
 
 // this could be virtual path when running in app store
@@ -589,6 +589,9 @@ static void RememberSessionState() {
             if (tab == cur) {
                 selectedDocOrdinal = docOrdinal;
             }
+        }
+        if (cur && cur->IsAboutTab()) {
+            selectedDocOrdinal = 0;
         }
         windowState->tabIndex = selectedDocOrdinal;
         RememberDefaultWindowPosition(win);

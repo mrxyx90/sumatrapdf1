@@ -209,7 +209,7 @@ bool FindNumericReferenceInPageText(WStr text, const Rect* coords, int textLen, 
 
 //--- shared between the RefHover*.cpp files, not for use outside them
 
-constexpr const WCHAR* kRefHoverClass = L"SumatraPDFRefHover";
+constexpr const WCHAR* kRefHoverClass = L"ApdfRefHover";
 
 constexpr float kRefHoverRenderZoom = 1.5f;
 constexpr int kRefHoverMaxPopupWidth = 1200;

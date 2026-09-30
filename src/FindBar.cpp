@@ -290,6 +290,7 @@ bool FindBarWnd::Create(MainWindow* mainWin) {
         edit = new DropDown();
         edit->SetColors(colTxt, colBg);
         edit->Create(args);
+        edit->SetIsVisible(false);
         CbSetCueBanner(edit, Tr("Find"));
         edit->onTextChanged = MkMethod0<FindBarWnd, &FindBarWnd::OnTextChanged>(this);
         edit->onCloseUp = MkMethod0<FindBarWnd, &FindBarWnd::OnHistoryCommitted>(this);
@@ -315,6 +316,7 @@ bool FindBarWnd::Create(MainWindow* mainWin) {
 
     DarkModeApplyToPopupWindow(hwnd);
     Layout();
+    edit->SetIsVisible(true);
 
     onWindowMoved = MkFunc1Void(FindBarReposition);
     win->RegisterOnWindowMoved(&onWindowMoved);

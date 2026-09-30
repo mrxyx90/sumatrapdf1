@@ -91,6 +91,7 @@ struct TabsCtrl : VirtCtrl {
 
     // host HWND (child of the frame); GetHwnd() also returns this once attached
     HWND hwnd = nullptr;
+    bool needsInitialBackground = true;
     PlatformFont* font = nullptr; // interned, not owned
 
     int ctrlID = 0;

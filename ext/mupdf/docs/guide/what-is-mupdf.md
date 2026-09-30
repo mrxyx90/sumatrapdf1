@@ -17,6 +17,7 @@ As you can tell by the name, we support reading PDF files. But that's not all!
 - ComicBook (CBZ and CBT)
 - Images (TIFF, JPEG, PNG, etc)
 - SVG (a limited subset only)
+- Markdown (MD)
 
 ## Viewers
 
@@ -32,7 +33,7 @@ On systems where this viewer cannot be built, we still support the older
 legacy viewer which does not have as many features.
 
 <dl>
-<dt><a href="../tools/mupdf-gl.html">mupdf-gl</a>
+<dt><a href="../tools/mupdf-gl.rst">mupdf-gl</a>
 <dd>The main viewer program that sports the most features.
 <dt>mupdf-x11
 <dd>The legacy X11 viewer that works everywhere.
@@ -74,34 +75,34 @@ tasks on PDF documents.
 For rendering and converting documents use these two commands:
 
 <dl>
-<dt><a href="../tools/mutool-draw.html">mutool draw</a>
+<dt><a href="../tools/mutool-draw.rst">mutool draw</a>
 <dd>This is the more customizable tool, but also has a more difficult set of command line options.
 It is primarily used for rendering a document to image files.
-<dt><a href="../tools/mutool-convert.html">mutool convert</a>
+<dt><a href="../tools/mutool-convert.rst">mutool convert</a>
 <dd>This tool is used for converting documents into other formats, and is easier to use.
 </dl>
 
 A highlight of some other tools useful for working with PDF documents:
 
 <dl>
-<dt><a href="../tools/mutool-show.html">mutool show</a>
+<dt><a href="../tools/mutool-show.rst">mutool show</a>
 <dd>A tool for displaying the internal objects in a PDF file.
-<dt><a href="../tools/mutool-extract.html">mutool extract</a>
+<dt><a href="../tools/mutool-extract.rst">mutool extract</a>
 <dd>Extract images and embedded font resources.
-<dt><a href="../tools/mutool-clean.html">mutool clean</a>
+<dt><a href="../tools/mutool-clean.rst">mutool clean</a>
 <dd>Rewrite PDF file. Used to fix broken files, or to make a PDF file human editable.
-<dt><a href="../tools/mutool-create.html">mutool create</a>
+<dt><a href="../tools/mutool-create.rst">mutool create</a>
 <dd>Create a new PDF file from a text file with graphics commands.
-<dt><a href="../tools/mutool-merge.html">mutool merge</a>
+<dt><a href="../tools/mutool-merge.rst">mutool merge</a>
 <dd>Merge pages from multiple input files into a new PDF.
-<dt><a href="../tools/mutool-poster.html">mutool poster</a>
+<dt><a href="../tools/mutool-poster.rst">mutool poster</a>
 <dd>Divide pages of a PDF into pieces that can be printed and merged into a large poster.
 </dl>
 
 And finally, there is a tool for doing anything you can imagine:
 
 <dl>
-<dt><a href="../tools/mutool-run.html">mutool run</a>
+<dt><a href="../tools/mutool-run.rst">mutool run</a>
 <dd>A tool for running Javascript programs with access to the MuPDF library functions.
 </dl>
 
@@ -109,7 +110,7 @@ And finally, there is a tool for doing anything you can imagine:
 
 The library is written in portable C.
 
-To learn more about the C interface, read the <a href="../cookbook/mupdf-explored.html">MuPDF Explored</a> book.
+To learn more about the C interface, read the <a href="../cookbook/mupdf-explored.rst">MuPDF Explored</a> book.
 
 ### Javascript
 
@@ -124,7 +125,7 @@ The Javascript library is available as a module on NPM.
 There is also a Java library, which uses JNI to provide access to the C library.
 
 The Java classes provide an interface very similar to that available in the
-<a href="../tools/mutool-run.html">mutool run</a> command line tool.
+<a href="../tools/mutool-run.rst">mutool run</a> command line tool.
 This Java library also powers the Android viewers.
 
 If you want to build an application for Android, you have several options. You

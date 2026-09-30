@@ -83,7 +83,7 @@ static bool WriteGoogleLensPage(WindowTab* tab, const u8* png, size_t pngSize) {
              "form.enctype='multipart/form-data';form.action='https://lens.google.com/v3/upload?ep=cntpubb&re=df&s=4';"
              "form.appendChild(i);document.body.appendChild(form);form.submit();</script>\n"));
 
-    TempStr path = GetTempFilePathTemp(StrL("SumatraPDF-Lens"));
+    TempStr path = GetTempFilePathTemp(StrL("Apdf-Lens"));
     if (len(path) == 0) {
         GoogleLensNotify(tab, Tr("Could not create a temporary file for Google Lens."));
         return false;

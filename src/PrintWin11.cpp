@@ -20,6 +20,7 @@
 #include "WindowTab.h"
 #include "SumatraDialogs.h"
 #include "Translations.h"
+#include "Version.h"
 #include "Print.h"
 
 #if defined(_MSC_VER) && __has_include(<PrintManagerInterop.h>) && __has_include(<DocumentSource.h>)
@@ -1126,7 +1127,7 @@ class Win11PrintSession {
 
         this->hwnd = hwnd;
         TempStr baseName = path::GetBaseNameTemp(engine->FilePath());
-        jobTitle = wstr::Dup(ToWStrTemp(baseName ? baseName : StrL("SumatraPDF document")));
+        jobTitle = wstr::Dup(ToWStrTemp(baseName ? baseName : fmt("%s document", StrL(kAppName))));
 
         hr = GetActivationFactory(RuntimeClass_Windows_Graphics_Printing_PrintManager, interop);
         if (SUCCEEDED(hr)) {

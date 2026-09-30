@@ -4,7 +4,7 @@ import { join, relative } from "node:path";
 import { $ } from "bun";
 import { clearDirPreserveSettings } from "./clean";
 import { ensureNinja, ninjaDir, ninjaToRoot } from "./ninja";
-import { detectVisualStudio2026, runLogged } from "./util";
+import { detectVisualStudio2026, extractSumatraVersion, runLogged } from "./util";
 
 type BuildMode = "windows" | "all" | "smoke" | "ci" | "daily" | "codeql" | "mingw" | "wine" | "build-no";
 type Config = "debug" | "release" | "profile";
@@ -25,7 +25,7 @@ interface BuildOptions {
 const usage = `Usage: bun cmd/build.ts <mode> [options]
 
 Windows builds:
-  -dbg | -rel             Build SumatraPDF.exe for x64
+  -dbg | -rel | -release  Build SumatraPDF.exe for x64
   -profile                Build a function-timing profile variant (out/prf64)
   -rel -32                Build the 32-bit release
   -asan [-dbg|-rel]       Build SumatraPDF-static.exe with MSVC ASan
@@ -101,7 +101,7 @@ function parseArgs(args: string[]): BuildOptions | undefined {
       break;
     }
     if (arg === "-dbg") setConfig(opts, "debug");
-    else if (arg === "-rel") setConfig(opts, "release");
+    else if (arg === "-rel" || arg === "-release") setConfig(opts, "release");
     else if (arg === "-profile") setConfig(opts, "profile");
     else if (arg === "-asan") {
       if (opts.asan) throw new CliError("-asan can only be specified once");
@@ -226,7 +226,19 @@ async function buildWindows(config: Config, win32: boolean, clean: boolean, ninj
     const { msbuildPath } = detectVisualStudio2026();
     await buildApp(msbuildPath, configName, platform, "SumatraPDF");
   }
-  printBinaries(outDir, new Set(["SumatraPDF.exe"]));
+  const mainExe = existsSync(join(outDir, "Apdf.exe")) ? "Apdf.exe" : "SumatraPDF.exe";
+  printBinaries(outDir, new Set([mainExe, "SumatraPDF.exe"]));
+  if (config === "release") {
+    const version = extractSumatraVersion();
+    const arch = win32 ? "" : "-64";
+    const installerName = `Apdf-${version}${arch}-install.exe`;
+    const installerPath = join(outDir, installerName);
+    const srcExe = existsSync(join(outDir, "Apdf.exe")) ? join(outDir, "Apdf.exe") : join(outDir, "SumatraPDF.exe");
+    if (existsSync(srcExe)) {
+      copyFileSync(srcExe, installerPath);
+      console.log(`installer: ${installerPath}`);
+    }
+  }
 }
 
 async function buildNinja(targets: string[]): Promise<void> {

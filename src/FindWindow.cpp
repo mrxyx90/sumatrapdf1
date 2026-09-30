@@ -340,6 +340,7 @@ bool FindWindowWnd::Create(MainWindow* mainWin) {
         edit = new DropDown();
         edit->SetColors(colTxt, colBg);
         edit->Create(args);
+        edit->SetIsVisible(false);
         CbSetCueBanner(edit, Tr("Find"));
         edit->onTextChanged = MkMethod0<FindWindowWnd, &FindWindowWnd::OnTextChanged>(this);
         edit->onCloseUp = MkMethod0<FindWindowWnd, &FindWindowWnd::OnHistoryCommitted>(this);
@@ -353,6 +354,7 @@ bool FindWindowWnd::Create(MainWindow* mainWin) {
         args.withBorder = true;
         args.cueText = StrL("e.g. 3,4-6,18-");
         args.isRtl = IsUIRtl();
+        args.isVisible = false;
         editPages = new Edit();
         editPages->SetColors(colTxt, colBg);
         editPages->Create(args);
@@ -390,6 +392,8 @@ bool FindWindowWnd::Create(MainWindow* mainWin) {
     BuildLayout();
 
     DarkModeApplyToPopupWindow(hwnd);
+    if (edit) edit->SetIsVisible(true);
+    if (editPages) editPages->SetIsVisible(true);
     return true;
 }
 

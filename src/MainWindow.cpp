@@ -55,6 +55,7 @@
 #include "Canvas.h"
 #include "HomePage.h"
 #include "MainWindow.h"
+#include "FloatingToolbar.h"
 
 static void SafeDeleteTabsCtrl(TabsCtrl* tabsCtrl) {
     logf("SafeDeleteTabsCtrl: 0x%p\n", tabsCtrl);
@@ -98,6 +99,7 @@ MainWindow::MainWindow(HWND hwnd) {
     linkHandler = new LinkHandler(this);
     cbHandler = CreateControllerCallbackHandler(this);
     overlayScrollOnMoved = MkFunc1Void(OverlayScrollbarsOnWindowMoved);
+    FloatingToolbarCreate(this);
     RegisterOnWindowMoved(&overlayScrollOnMoved);
 }
 
@@ -133,6 +135,7 @@ void CreateMovePatternLazy(MainWindow* win) {
 }
 
 MainWindow::~MainWindow() {
+    FloatingToolbarDestroy(this);
     CancelAnnotationResizeRerender(this);
     KillTimer(hwndCanvas, kSmoothScrollTimerID);
     KillTimer(hwndCanvas, kReadingAutoScrollTimerID);
@@ -371,8 +374,13 @@ MarkdownModel* MainWindow::AsMarkdown() const {
 // about a potential change of available canvas size
 void MainWindow::UpdateCanvasSize() {
     if (suppressCanvasSizeUpdate) {
+        FloatingToolbarRelayout(this);
         return;
     }
+    // The bookmark sidebar and frame resize can change the available canvas
+    // without changing the frame position. Keep the floating toolbar aligned.
+    FloatingToolbarRelayout(this);
+
     Rect rc = HwndClientRect(hwndCanvas);
     if (buffer && canvasRc == rc) {
         return;

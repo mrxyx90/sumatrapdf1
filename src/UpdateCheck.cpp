@@ -134,8 +134,8 @@ static UpdateInfo* ParseUpdateInfo(Str d) {
     if (len(d) == 0) {
         return nullptr;
     }
-    Str prefix = (d.s[0] == '[') ? StrL("[SumatraPDF]") : StrL("SumatraPDF");
-    if (!str::StartsWith(d, prefix)) {
+    Str prefix = (d.s[0] == '[') ? StrL("[Apdf]") : StrL("Apdf");
+    if (!str::StartsWith(d, prefix) && !str::StartsWith(d, StrL("SumatraPDF"))) {
         return nullptr;
     }
 
@@ -147,7 +147,10 @@ static UpdateInfo* ParseUpdateInfo(Str d) {
 
     SetPromoString(SerializeSquareTreeNodeTemp(root->GetChild(StrL("Promo"))));
 
-    SquareTreeNode* node = root->GetChild(StrL("SumatraPDF"));
+    SquareTreeNode* node = root->GetChild(StrL("Apdf"));
+    if (!node) {
+        node = root->GetChild(StrL("SumatraPDF"));
+    }
     if (!node) {
         return nullptr;
     }
@@ -322,7 +325,7 @@ static void NotifyUserOfUpdate(UpdateInfo* updateInfo) {
 
     constexpr int kBtnIdDontInstall = 100;
     constexpr int kBtnIdInstall = 101;
-    auto title = Tr("SumatraPDF Update");
+    auto title = fmt(Tr("%s Update").s, StrL(kAppName));
     TASKDIALOGCONFIG dialogConfig{};
     TASKDIALOG_BUTTON buttons[2];
 
@@ -568,7 +571,7 @@ static void NotifySuspiciousUpdate(HWND hwndParent, Str dlURL) {
     logf("  url hex[0..%d]=%s\n", kUrlHexHead, HexHeadTemp(dlURL, kUrlHexHead));
     logf("  host hex[0..%d]=%s\n", kUrlHexHead, HexHeadTemp(kExpectedDlHost, kUrlHexHead));
     ReportIf(true);
-    auto title = Tr("SumatraPDF Update");
+    auto title = fmt(Tr("%s Update").s, StrL(kAppName));
     auto content = fmt(R"(Suspicious update.
 
 Download link should come from <a href="%s">%s</a> but is %s.
@@ -611,7 +614,7 @@ Visit <a href="%s">%s</a> to download the latest version.)",
 // update manually (e.g. if TLS validation or the network failed).
 static void NotifyUpdateCheckFailed(HWND hwndParent, DWORD err) {
     logf("NotifyUpdateCheckFailed: err=%#x\n", (unsigned)err);
-    auto title = Tr("SumatraPDF Update");
+    auto title = fmt(Tr("%s Update").s, StrL(kAppName));
     auto mainInstr = Tr("Couldn't check for updates");
     TempStr msg = fmt(Tr("Couldn't download update information (error %#x).").s, err);
     TempStr content = fmt(R"(%s

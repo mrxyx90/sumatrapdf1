@@ -36,6 +36,7 @@
 #include "SearchAndDDE.h"
 #include "AnnotEditToolbar.h"
 #include "AnnotFilterToolbar.h"
+#include "FloatingToolbar.h"
 #include "Tabs.h"
 #include "PagePosition.h"
 #include "gui/Layout.h"
@@ -53,6 +54,7 @@
 #include "Theme.h"
 #include "ReadAloud.h"
 #include "Toolbar.h"
+#include "FloatingToolbar.h"
 
 // https://docs.microsoft.com/en-us/windows/win32/controls/toolbar-control-reference
 
@@ -280,6 +282,15 @@ static void SetPdfAnnotationButtonEnabledByIdx(MainWindow* win, int idx, bool is
     }
     w->SetIsEnabled(isEnabled);
     w->Invalidate();
+}
+
+static void SetPdfAnnotationButtonCheckedByIdx(MainWindow* win, int idx, bool isChecked) {
+    auto* ib = AsVirtIconButton(PdfAnnotationToolbarItemAt(win, idx));
+    if (!ib || ib->isSelected == isChecked) {
+        return;
+    }
+    ib->isSelected = isChecked;
+    ib->Invalidate();
 }
 
 // true if the row has to be laid out again
@@ -635,7 +646,7 @@ static void SetPdfAnnotationsToolbarVisible(MainWindow* win, bool visible) {
         return;
     }
     tb->annotationRow->SetVisibility(want);
-    SetToolbarButtonCheckedState(win, CmdToggleEditPDF, visible);
+    SetToolbarButtonCheckedState(win, CmdToggleEditPDF, visible && !IsPlacingAnnotation(win));
     ToolbarSetHeight(win, tb->rowDy * (visible ? 2 : 1));
     tb->host->Relayout();
     tb->host->Invalidate(true);
@@ -688,7 +699,7 @@ void ToolbarUpdateStateForWindow(MainWindow* win, bool setButtonsVisibility) {
     bool showPdfAnnotationsToolbar = win->pdfAnnotationsToolbarEnabled && ctx->isPdf && ctx->supportsAnnots;
     SetPdfAnnotationsToolbarVisible(win, showPdfAnnotationsToolbar);
     // a placement mode (ink, shape, highlighter...) owns the page until it ends
-    bool annotButtonsEnabled = showPdfAnnotationsToolbar && !IsPlacingAnnotation(win);
+    bool annotButtonsEnabled = showPdfAnnotationsToolbar;
     bool annotVisibilityChanged = false;
     for (int i = 0; i < kPdfAnnotationButtonsCount; i++) {
         const ToolbarButtonInfo& bi = gPdfAnnotationButtons[i];
@@ -699,6 +710,8 @@ void ToolbarUpdateStateForWindow(MainWindow* win, bool setButtonsVisibility) {
         bool remove = CommandShouldRemove(v);
         annotVisibilityChanged |= SetPdfAnnotationButtonHiddenByIdx(win, i, remove);
         SetPdfAnnotationButtonEnabledByIdx(win, i, annotButtonsEnabled && !CommandShouldDisable(v) && !remove);
+        bool isChecked = IsPlacingAnnotation(win) && win->annotPlacement.cmdId == bi.cmdId;
+        SetPdfAnnotationButtonCheckedByIdx(win, i, isChecked);
         if (bi.cmdId == CmdSaveAnnotations) {
             // name the file it writes to, like the annotation list's Save button
             WindowTab* tab = win->CurrentTab();
@@ -779,6 +792,7 @@ void ToolbarUpdateStateForWindow(MainWindow* win, bool setButtonsVisibility) {
             win->tabsCtrl->SetTabDirty(i, dirty);
         }
     }
+    UpdateFloatingToolbarActiveState(win);
 }
 
 void SetToolbarButtonEnableState(MainWindow* win, int cmdId, bool isEnabled) {
@@ -797,7 +811,7 @@ void SetToolbarButtonEnableState(MainWindow* win, int cmdId, bool isEnabled) {
     }
 }
 
-static void SetPdfAnnotationsToolbarEnabled(MainWindow* win, bool enabled) {
+void SetPdfAnnotationsToolbarEnabled(MainWindow* win, bool enabled) {
     if (!win) {
         return;
     }
@@ -1170,6 +1184,7 @@ void UpdateToolbarPageText(MainWindow* win, int pageCount, bool updateOnly) {
     tb->pageTotal->SetText(txt);
     host->Relayout();
     host->Invalidate(true);
+    UpdateFloatingToolbarPageText(win);
 }
 
 static TempStr ShortcutToolbarToolTipTemp(Shortcut* shortcut) {
@@ -1489,7 +1504,6 @@ void ToolbarNoteDropdownClosed() {
 }
 
 static bool ShowToolbarButtonDropdown(MainWindow*, int cmdId);
-static bool IsAnnotColorCmd(int cmdId);
 
 static void OnToolbarButtonClicked(MainWindow* win, VirtMouseEvent* ev) {
     VirtCtrl* w = ev->target;
@@ -1500,13 +1514,14 @@ static void OnToolbarButtonClicked(MainWindow* win, VirtMouseEvent* ev) {
     if (cmdId == PageInfoId || cmdId == 0) {
         return;
     }
-    if (ToolbarDropdownJustClosed() && (cmdId == CmdToggleReadAloud || cmdId == CmdPauseReadAloud)) {
+    if (IsPlacingAnnotation(win) && win->annotPlacement.cmdId == cmdId) {
+        CancelAnnotationPlacement(win);
+        ToolbarUpdateStateForWindow(win, false);
         ev->didHandle = true;
         return;
     }
-    // annotation buttons are disabled while a placement mode is on
-    ToolbarVirt* tbv = win->toolbarVirt;
-    if (tbv && IsPlacingAnnotation(win) && VecContains(tbv->annotationItems, w)) {
+    if (ToolbarDropdownJustClosed() && (cmdId == CmdToggleReadAloud || cmdId == CmdPauseReadAloud)) {
+        ev->didHandle = true;
         return;
     }
     // right-click: the drop-down, not the button's command
@@ -2146,10 +2161,6 @@ static void ToolbarHoverDropdownOnMouseMove(MainWindow* win, const Point* client
     if (w && FindHoverReg(tb, w->id)) {
         cmdId = w->id;
     }
-    // except annotation buttons disabled by a placement mode
-    if (w && IsPlacingAnnotation(win) && VecContains(tb->annotationItems, w)) {
-        cmdId = 0;
-    }
 
     if (tb->hoverCmdId != 0) {
         // one is open: keep it while the mouse is on its button or in it
@@ -2405,7 +2416,7 @@ static const int kAnnotColorCmds[] = {
     CmdCreateAnnotInk,           CmdCreateAnnotStamp,     CmdCreateAnnotCaret,     CmdCreateAnnotFileAttachment,
 };
 
-static bool IsAnnotColorCmd(int cmdId) {
+bool IsAnnotColorCmd(int cmdId) {
     for (int id : kAnnotColorCmds) {
         if (id == cmdId) {
             return true;
@@ -3492,8 +3503,9 @@ void CreateToolbar(MainWindow* win) {
     args.className = kToolbarHostClass;
     args.initialSize = {100, ToolbarRowDy(iconSize)};
     args.bgColor = TbBgColor();
+    args.fillBackgroundBeforeFirstVisiblePaint = true;
     args.isRtl = IsUIRtl();
-    args.visible = true;
+    args.visible = false;
     // the old Win32 toolbar did not take the keyboard focus; a generic child
     // would, and then accelerators (Ctrl+W, …) never reached the frame
     args.noActivate = true;
@@ -3693,9 +3705,13 @@ static Edit* ToolbarCreateLocationEdit(MainWindow* win, PlatformFont* font, int 
     args.centerTextVert = true;
     args.marginLeft = PageEditPadL();
     args.marginRight = PageEditPadR();
+    args.isVisible = false;
     auto* e = new Edit();
+    // Avoid a separate erase-then-paint pass under the native page-number field.
+    e->shouldEraseBackground = false;
     e->SetColors(TbTextColor(), ThemeWindowControlBackgroundColor());
     e->Create(args);
+    e->SetIsVisible(true);
     // the toolbar tree arranges itself right-to-left (HBox.rtl), so its bounds
     // are offsets from the physical left; don't let the RTL host mirror them
     e->mapRtlX = true;
@@ -3738,13 +3754,13 @@ static bool OnCtlColor(MainWindow* win, VirtHostNativeMsg* ev) {
         return false;
     }
     HDC hdc = (HDC)ev->wp;
+    Color bg = ThemeWindowControlBackgroundColor();
     SetTextColor(hdc, TbTextColor());
-    SetBkColor(hdc, ThemeWindowControlBackgroundColor());
-    if (IsCurrentThemeDefault() && !ThemeColorizeControls() && !ThemeUsesHighContrastColors()) {
-        ev->res = (LRESULT)GetStockObject(WHITE_BRUSH);
-    } else {
-        ev->res = (LRESULT)win->brControlBgColor;
+    SetBkColor(hdc, bg);
+    if (!win->brControlBgColor) {
+        win->brControlBgColor = CreateSolidBrush(bg);
     }
+    ev->res = (LRESULT)win->brControlBgColor;
     return true;
 }
 
@@ -3793,3 +3809,13 @@ static void OnToolbarNativeMsg(MainWindow* win, VirtHostNativeMsg* ev) {
 void ToolbarSetNativeHooks(MainWindow* win, VirtHost* host) {
     host->onNativeMsg = MkFunc1(OnToolbarNativeMsg, win);
 }
+
+// Helper for floating toolbar to build annotation color hover menu
+void BuildAnnotColorsHoverMenuForCmd(MainWindow* win, int cmdId, ToolbarHoverBuildEvent* ev) {
+    if (!ev) {
+        return;
+    }
+    ev->cmdId = cmdId;
+    BuildAnnotColorsHoverMenu(win, ev);
+}
+

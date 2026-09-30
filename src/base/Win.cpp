@@ -1239,7 +1239,7 @@ static HWND GetClipboardOwnerWnd() {
     if (gClipboardOwnerWnd && IsWindow(gClipboardOwnerWnd)) {
         return gClipboardOwnerWnd;
     }
-    static WCHAR className[] = L"SumatraPDFClipboardOwner";
+    static WCHAR className[] = L"ApdfClipboardOwner";
     static bool registered = false;
     if (!registered) {
         WNDCLASSEX wcex;

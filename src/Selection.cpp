@@ -28,6 +28,7 @@
 #include "MainWindow.h"
 #include "WindowTab.h"
 #include "SelectionToolbar.h"
+#include "AnnotPlacement.h"
 #include "SelectTextKeyboard.h"
 #include "Commands.h"
 #include "Toolbar.h"
@@ -431,8 +432,6 @@ void UpdateRectangularSelectionEdit(MainWindow* win, int x, int y) {
 void PaintTransparentRectangles(Gfx* gfx, Rect screenRc, Vec<Rect>& rects, Color selectionColor, u8 alpha, int pad,
                                 bool drawBorder) {
     Vec<Rect> paintedRects;
-    // A bordered selection is the 3.6.1 look: font-height boxes as-is and a
-    // 1px outline. Find highlights stay borderless and pad the box.
     int clipPad = drawBorder ? 1 : pad;
     screenRc.Inflate(clipPad, clipPad);
     for (int i = 0; i < len(rects); i++) {
@@ -458,27 +457,6 @@ static Rect QuadScreenBounds(const Point* pts) {
         y1 = std::max(y1, pts[i].y);
     }
     return Rect::FromXY(x0, y0, x1, y1);
-}
-
-static void PaintTransparentQuads(Gfx* gfx, Rect screenRc, Vec<Point>& pts, Color selectionColor, u8 alpha,
-                                  bool drawBorder) {
-    int nQuads = len(pts) / 4;
-    if (nQuads <= 0) {
-        return;
-    }
-    screenRc.Inflate(1, 1);
-    Vec<Point> painted;
-    for (int i = 0; i < nQuads; i++) {
-        Point* q = pts.els + ((ptrdiff_t)i * 4);
-        if (QuadScreenBounds(q).Intersect(screenRc).IsEmpty()) {
-            continue;
-        }
-        for (int k = 0; k < 4; k++) {
-            VecAppend(painted, q[k]);
-        }
-    }
-    int outlineWidth = drawBorder ? 1 : 0;
-    gfx->FillQuads(painted.els, len(painted) / 4, selectionColor, alpha, outlineWidth);
 }
 
 // Touch selection handles: a dot under each end of the selection, big enough
@@ -545,13 +523,127 @@ static void PaintTouchSelHandles(MainWindow* win, Gfx* gfx) {
     if (!win->touchSelHandles || !GetTouchSelHandleRects(win, start, end)) {
         return;
     }
-    ParsedColor* parsedCol = GetPrefsColor(gSettings->fixedPageUI.selectionColor);
+    ParsedColor* parsedCol = GetPrefsColor(IsPlacingHighlighterAnnotation(win) ? gSettings->annotations.highlightColor : gSettings->fixedPageUI.selectionColor);
     Color col = parsedCol->col;
     gfx->FillEllipse(start, col);
     gfx->FillEllipse(end, col);
 }
 
-void PaintSelection(MainWindow* win, Gfx* gfx) {
+static inline u8 MultiplyBlend(u8 dst, u8 src, u32 alpha) {
+    int multiplied = (dst * src) / 255;
+    int diff = multiplied - dst;
+    int res = dst + (diff * (int)alpha) / 255;
+    return (u8)std::clamp(res, 0, 255);
+}
+
+static bool PointInQuad(Point pt, const Point* q) {
+    auto sign = [](Point p1, Point p2, Point p3) {
+        return (double)(p1.x - p3.x) * (p2.y - p3.y) - (double)(p2.x - p3.x) * (p1.y - p3.y);
+    };
+    bool b1 = sign(pt, q[0], q[1]) < 0.0;
+    bool b2 = sign(pt, q[1], q[2]) < 0.0;
+    bool b3 = sign(pt, q[2], q[3]) < 0.0;
+    bool b4 = sign(pt, q[3], q[0]) < 0.0;
+    return (b1 == b2) && (b2 == b3) && (b3 == b4);
+}
+
+static void PaintMultiplySelection(HDC hdc, Rect screenRc, const Vec<Rect>& rects, const Vec<Point>& quadPts, Color selectionColor, u8 alpha) {
+    if (!hdc || (len(rects) == 0 && len(quadPts) == 0)) {
+        return;
+    }
+    int x0 = screenRc.x, y0 = screenRc.y, x1 = screenRc.x + screenRc.dx, y1 = screenRc.y + screenRc.dy;
+    bool first = true;
+    for (const Rect& rc : rects) {
+        Rect r = rc.Intersect(screenRc);
+        if (!r.IsEmpty()) {
+            if (first) {
+                x0 = r.x; y0 = r.y; x1 = r.x + r.dx; y1 = r.y + r.dy;
+                first = false;
+            } else {
+                x0 = std::min(x0, r.x);
+                y0 = std::min(y0, r.y);
+                x1 = std::max(x1, r.x + r.dx);
+                y1 = std::max(y1, r.y + r.dy);
+            }
+        }
+    }
+    int nQuads = len(quadPts) / 4;
+    for (int i = 0; i < nQuads; i++) {
+        const Point* q = quadPts.els + (i * 4);
+        Rect qr = QuadScreenBounds(q).Intersect(screenRc);
+        if (!qr.IsEmpty()) {
+            if (first) {
+                x0 = qr.x; y0 = qr.y; x1 = qr.x + qr.dx; y1 = qr.y + qr.dy;
+                first = false;
+            } else {
+                x0 = std::min(x0, qr.x);
+                y0 = std::min(y0, qr.y);
+                x1 = std::max(x1, qr.x + qr.dx);
+                y1 = std::max(y1, qr.y + qr.dy);
+            }
+        }
+    }
+    int dx = x1 - x0;
+    int dy = y1 - y0;
+    if (dx <= 0 || dy <= 0) {
+        return;
+    }
+
+    Pixmap* dst = AllocPixmapDIB(dx, dy);
+    if (!dst) {
+        return;
+    }
+    HDC memDC = CreateCompatibleDC(hdc);
+    if (memDC) {
+        HGDIOBJ prev = SelectObject(memDC, dst->hbmp);
+        if (prev) {
+            BitBlt(memDC, 0, 0, dx, dy, hdc, x0, y0, SRCCOPY);
+            GdiFlush();
+
+            u8 sr, sg, sb;
+            UnpackColor(selectionColor, sr, sg, sb);
+
+            for (int y = 0; y < dy; y++) {
+                u8* d = dst->data + ((size_t)y * dst->stride);
+                int worldY = y0 + y;
+                for (int x = 0; x < dx; x++, d += 4) {
+                    int worldX = x0 + x;
+                    bool inside = false;
+                    Point pt{worldX, worldY};
+                    for (const Rect& rc : rects) {
+                        if (rc.Contains(pt)) {
+                            inside = true;
+                            break;
+                        }
+                    }
+                    if (!inside) {
+                        for (int i = 0; i < nQuads; i++) {
+                            const Point* q = quadPts.els + (i * 4);
+                            if (PointInQuad(pt, q)) {
+                                inside = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (!inside) {
+                        continue;
+                    }
+                    u8 db = d[0], dg = d[1], dr = d[2];
+                    d[0] = MultiplyBlend(db, sb, alpha);
+                    d[1] = MultiplyBlend(dg, sg, alpha);
+                    d[2] = MultiplyBlend(dr, sr, alpha);
+                }
+            }
+            GdiFlush();
+            BitBlt(hdc, x0, y0, dx, dy, memDC, 0, 0, SRCCOPY);
+            SelectObject(memDC, prev);
+        }
+        DeleteDC(memDC);
+    }
+    FreePixmap(dst);
+}
+
+void PaintSelection(MainWindow* win, Gfx* gfx, HDC hdc) {
     ReportIf(!win->AsFixed());
 
     Vec<Rect> rects;
@@ -611,20 +703,15 @@ void PaintSelection(MainWindow* win, Gfx* gfx) {
         }
     }
 
-    ParsedColor* parsedCol = GetPrefsColor(gSettings->fixedPageUI.selectionColor);
+    ParsedColor* parsedCol = GetPrefsColor(IsPlacingHighlighterAnnotation(win) ? gSettings->annotations.highlightColor : gSettings->fixedPageUI.selectionColor);
     // honor the alpha channel of SelectionColor (#aarrggbb): a smaller alpha makes
     // the overlay more transparent so the selected text stays crisp (issue #3209).
     // Fall back to the historical default when no alpha is given (e.g. #rrggbb).
     u8 alpha = GetAlpha(parsedCol->col);
     if (alpha == 0) {
-        alpha = kSelectionDefaultAlpha;
+        alpha = IsPlacingHighlighterAnnotation(win) ? 200 : kSelectionDefaultAlpha;
     }
-    if (len(quadPts) > 0) {
-        PaintTransparentQuads(gfx, win->canvasRc, quadPts, parsedCol->col, alpha, /*drawBorder*/ true);
-    }
-    if (len(rects) > 0) {
-        PaintTransparentRectangles(gfx, win->canvasRc, rects, parsedCol->col, alpha, 1, /*drawBorder*/ true);
-    }
+    PaintMultiplySelection(hdc, win->canvasRc, rects, quadPts, parsedCol->col, alpha);
     PaintTouchSelHandles(win, gfx);
 }
 

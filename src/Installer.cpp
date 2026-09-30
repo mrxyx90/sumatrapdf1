@@ -744,7 +744,7 @@ static bool ShowMoveAsideBlockedDialog(Str path, Str copyPath, Str fileName) {
     }
     cfg.cbSize = sizeof(cfg);
     cfg.hwndParent = gWnd ? gWnd->hwnd : nullptr;
-    cfg.pszWindowTitle = L"SumatraPDF";
+    cfg.pszWindowTitle = CWStrTemp(StrL(kAppName));
     cfg.pszMainInstruction = CWStrTemp(fmt(Tr("Cannot update %s").s, fileName));
     cfg.pszContent = CWStrTemp(content);
     cfg.dwFlags = (TASKDIALOG_FLAGS)flags;
@@ -879,7 +879,7 @@ static bool PrepareInstallDirByRenaming(Str installDir, bool silent, bool skipEx
 static void DeleteInstallCopyLeftovers(Str destDir) {
     static const Str kCopies[] = {
         StrL("libsumatrapdf.dll.copy"), StrL("libmupdf.dll.copy"),   StrL("PdfFilter.dll.copy"),
-        StrL("PdfPreview.dll.copy"),    StrL("SumatraPDF.exe.copy"),
+        StrL("PdfPreview.dll.copy"),    StrL("Apdf.exe.copy"),        StrL("SumatraPDF.exe.copy"),
     };
     for (Str name : kCopies) {
         TempStr copyPath = path::JoinTemp(destDir, name);
@@ -903,7 +903,7 @@ static void DeleteInstallCopyLeftovers(Str destDir) {
 static void RestoreInstallCopyFiles(Str installDir) {
     logf("RestoreInstallCopyFiles('%s')\n", installDir);
     static const Str kFiles[] = {
-        StrL("SumatraPDF.exe"), StrL("libsumatrapdf.dll"), StrL("PdfFilter.dll"),
+        Str(kExeName), StrL("SumatraPDF.exe"), StrL("libsumatrapdf.dll"), StrL("PdfFilter.dll"),
         StrL("PdfPreview.dll"), StrL("libmupdf.dll"),
     };
     for (Str name : kFiles) {
@@ -1087,7 +1087,7 @@ static bool CopySelfToDir(Str destDir) {
             Tr("Not enough free disk space to copy SumatraPDF.exe to the installation directory.\n\n"
                "Free up space on this drive and try again."));
     } else {
-        NotifyFailed(Tr("Couldn't copy SumatraPDF.exe to the installation directory"));
+        NotifyFailed(fmt(Tr("Couldn't copy %s to the installation directory").s, Str(kExeName)));
     }
     return false;
 }
@@ -1506,7 +1506,7 @@ static HRESULT CALLBACK InstallationFailedDialogCallback(HWND /*hwnd*/, UINT msg
         case TDN_BUTTON_CLICKED:
             if ((int)wParam == kBtnIdShowInstallLog) {
                 Str logText = gLogBuf ? ToStr(*gLogBuf) : StrL("(no log available)");
-                ShowTextInWindowDialog(Tr("SumatraPDF installation log"), logText);
+                ShowTextInWindowDialog(fmt("%s installation log", StrL(kAppName)), logText);
                 return S_FALSE; // keep TaskDialog open
             }
             break;
@@ -1536,7 +1536,7 @@ static void ShowInstallationFailedUi(HWND hwndParent) {
     }
     dialogConfig.cbSize = sizeof(TASKDIALOGCONFIG);
     dialogConfig.hwndParent = hwndParent;
-    dialogConfig.pszWindowTitle = L"SumatraPDF";
+    dialogConfig.pszWindowTitle = CWStrTemp(StrL(kAppName));
     dialogConfig.pszMainInstruction = L"Installation failed";
     dialogConfig.pszContent = CWStrTemp(content);
     dialogConfig.nDefaultButton = IDOK;
@@ -1580,11 +1580,11 @@ static void OnInstallationFinished(Flags* cli) {
     DeleteWnd(&gWnd->btnInstall);
     DeleteWnd(&gWnd->progressBar);
     auto isRtl = IsUIRtl();
-    if (!cli->installer.fastInstall) {
-        gWnd->btnRunSumatra = CreateDefaultButton(gWnd->hwnd, Tr("Start SumatraPDF"), isRtl);
+    if (!cli->fastInstall) {
+        gWnd->btnRunSumatra = CreateDefaultButton(gWnd->hwnd, fmt(Tr("Start %s").s, StrL(kAppName)), isRtl);
         gWnd->btnRunSumatra->onClick = MkFunc0Void(OnButtonStartSumatra);
     }
-    SetMsg(Tr("Thank you! SumatraPDF has been installed."), kColorMsgOk);
+    SetMsg(fmt(Tr("Thank you! %s has been installed.").s, StrL(kAppName)), kColorMsgOk);
     gMsgError = gFirstError;
     HwndRepaintNow(gWnd->hwnd);
 
@@ -1792,7 +1792,7 @@ static void OnButtonBrowse(InstallerWnd* wnd) {
         installDir = path::GetDirTemp(installDir);
     }
 
-    auto caption = Tr("Select the folder where SumatraPDF should be installed:");
+    auto caption = fmt(Tr("Select the folder where %s should be installed:").s, StrL(kAppName));
     TempStr installPath = BrowseForFolderTemp(wnd->hwnd, installDir, caption);
     if (len(installPath) == 0) {
         HwndSetFocus(wnd->btnBrowseDir->hwnd);
@@ -1847,7 +1847,7 @@ static void CreateInstallerWindowControls(InstallerWnd* wnd, Flags* cli) {
     bool isRtl = IsUIRtl();
     bool showInstallButton = !cli->installer.fastInstall;
 
-    wnd->btnInstall = CreateDefaultButton(hwnd, Tr("Install SumatraPDF"), isRtl);
+    wnd->btnInstall = CreateDefaultButton(hwnd, fmt(Tr("Install %s").s, StrL(kAppName)), isRtl);
     wnd->btnInstall->onClick = MkFunc0(OnButtonInstall, wnd);
     ShowAndEnable(wnd->btnInstall, showInstallButton);
 
@@ -1907,7 +1907,7 @@ static void CreateInstallerWindowControls(InstallerWnd* wnd, Flags* cli) {
     wnd->editInstallationDir->SetText(cli->installer.installDir);
 
     wnd->staticInstDir = NewVirtText({
-        .s = Tr("Install SumatraPDF in &folder:"),
+        .s = fmt(Tr("Install %s in &folder:").s, StrL(kAppName)),
         .font = GetDefaultGuiFont(),
         .textColor = kColBlack,
         .isRtl = IsUIRtl(),
@@ -2071,7 +2071,7 @@ static bool CreateInstallerWnd(Flags* cli) {
         RegisterClassExW(&wcex);
     }
 
-    TempStr title = fmt(Tr("SumatraPDF %s Installer").s, StrL(CURR_VERSION_STRA));
+    TempStr title = fmt(Tr("%s %s Installer").s, StrL(kAppName), StrL(CURR_VERSION_STRA));
     DWORD exStyle = 0;
     if (trans::IsCurrLangRtl()) {
         exStyle = WS_EX_LAYOUTRTL;
@@ -2097,7 +2097,7 @@ static bool CreateInstallerWnd(Flags* cli) {
 }
 
 static bool CreateInstallerWindow(Flags* cli) {
-    gDefaultMsg = Tr("Thank you for choosing SumatraPDF!");
+    gDefaultMsg = fmt(Tr("Thank you for choosing %s!").s, StrL(kAppName));
     if (!CreateInstallerWnd(cli)) {
         return false;
     }
@@ -2286,11 +2286,11 @@ static bool EnsureEnoughDiskSpaceForInstall(Str installDir, const lzma::SimpleAr
     }
     int freeMb = (int)(freeBytes / (1024ull * 1024ull));
     int needMb = (int)((need + (1024ll * 1024) - 1) / (1024ll * 1024));
-    NotifyFailed(fmt(Tr("Not enough free disk space to install SumatraPDF.\n\n"
+    NotifyFailed(fmt(Tr("Not enough free disk space to install %s.\n\n"
                         "Required: about %d MB free\nAvailable: %d MB\n\n"
                         "Free up space on this drive and try again.")
                          .s,
-                     needMb, freeMb));
+                     StrL(kAppName), needMb, freeMb));
     return false;
 }
 
@@ -2366,10 +2366,10 @@ static bool ShouldInstallMismatchedArch(HWND hwndParent) {
         flags |= TDF_RTL_LAYOUT;
     }
     dialogConfig.cbSize = sizeof(TASKDIALOGCONFIG);
-    s = Tr("Installing 32-bit SumatraPDF on 64-bit OS");
+    s = fmt(Tr("Installing 32-bit %s on 64-bit OS").s, StrL(kAppName));
     dialogConfig.pszWindowTitle = CWStrTemp(s);
     // dialogConfig.pszMainInstruction = mainInstr;
-    s = Tr("You're installing 32-bit SumatraPDF on 64-bit OS.\nWould you like to download\n64-bit version?");
+    s = fmt(Tr("You're installing 32-bit %s on 64-bit OS.\nWould you like to download\n64-bit version?").s, StrL(kAppName));
     dialogConfig.pszContent = CWStrTemp(s);
     dialogConfig.nDefaultButton = kBtnIdContinue;
     dialogConfig.dwFlags = (TASKDIALOG_FLAGS)flags;

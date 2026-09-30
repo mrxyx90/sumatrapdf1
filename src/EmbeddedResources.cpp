@@ -9,6 +9,7 @@
 #include "mupdf/noto_sumatra.h"
 
 #include "resource.h"
+#include "Version.h"
 #include "EmbeddedResources.h"
 
 EXTERN_C IMAGE_DOS_HEADER __ImageBase;
@@ -24,7 +25,7 @@ static HMODULE GetArchiveModule() {
     if (FindResourceW(self, MAKEINTRESOURCEW(IDR_EMBEDDED_PAK), RT_RCDATA)) {
         return self;
     }
-    TempStr path = GetPathInExeDirTemp(StrL("SumatraPDF.exe"));
+    TempStr path = GetPathInExeDirTemp(StrL(kExeName));
     WStr wpath = ToWStrTemp(path);
     return LoadLibraryExW(wpath.s, nullptr, LOAD_LIBRARY_AS_DATAFILE | LOAD_LIBRARY_AS_IMAGE_RESOURCE);
 }

@@ -103,10 +103,16 @@ static LRESULT CALLBACK WndProcVirtHost(HWND hwnd, UINT msg, WPARAM wp, LPARAM l
             host->Relayout();
             return 0;
         case WM_ERASEBKGND:
+            if (host->fillBackgroundBeforeFirstVisiblePaint && host->bgColor != kColorUnset) {
+                HdcFillRect((HDC)wp, HwndClientRect(hwnd), host->bgColor);
+            }
             // WM_PAINT draws the whole client area into a back buffer
             return 1;
         case WM_PAINT:
             PaintHost(host, hwnd);
+            if (host->fillBackgroundBeforeFirstVisiblePaint && HwndIsVisible(hwnd)) {
+                host->fillBackgroundBeforeFirstVisiblePaint = false;
+            }
             return 0;
         case WM_TIMER:
             if (host->onTimer.IsValid()) {
@@ -173,6 +179,7 @@ VirtHost* VirtHost::Create(const CreateArgs& args) {
 
     auto* host = new VirtHost();
     host->bgColor = args.bgColor;
+    host->fillBackgroundBeforeFirstVisiblePaint = args.fillBackgroundBeforeFirstVisiblePaint;
     host->noActivate = args.noActivate;
     host->isPopup = args.isPopup;
     host->userData = args.userData;

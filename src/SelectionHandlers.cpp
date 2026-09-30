@@ -89,7 +89,7 @@ static TempStr WriteSelectionToTempFileTemp(Str selection, Str ext) {
         return {};
     }
     // include the pid so two instances don't fight over the same file
-    TempStr name = fmt("SumatraPDF-selection-%d%s", (int)GetCurrentProcessId(), ext);
+    TempStr name = fmt("Apdf-selection-%d%s", (int)GetCurrentProcessId(), ext);
     TempStr path = path::JoinTemp(dir, name);
     if (!file::WriteFile(path, selection)) {
         return {};
@@ -307,7 +307,7 @@ void SelectionHandlerPostViaBrowser(WindowTab* tab, Str url, Str bodyPattern, St
         ShowSelectionHandlerNotification(tab, Tr("Couldn't create a temporary file"), true);
         return;
     }
-    TempStr name = fmt("SumatraPDF-post-%d.html", (int)GetCurrentProcessId());
+    TempStr name = fmt("Apdf-post-%d.html", (int)GetCurrentProcessId());
     TempStr path = path::JoinTemp(dir, name);
     if (!file::WriteFile(path, ToStr(html))) {
         ShowSelectionHandlerNotification(tab, Tr("Couldn't create a temporary file"), true);

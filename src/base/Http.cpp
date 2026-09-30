@@ -76,7 +76,7 @@ bool IsHttpRspOk(const HttpRsp* rsp) {
 }
 
 // per RFC 1945 10.15 and 3.7, a user agent product token shouldn't contain whitespace
-constexpr const WCHAR* kUserAgent = L"SumatraPdfHTTP";
+constexpr const WCHAR* kUserAgent = L"ApdfHTTP";
 
 // returns false if failed to download or status code is not 200
 // for other scenarios, check HttpRsp

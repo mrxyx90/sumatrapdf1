@@ -46,7 +46,7 @@ const char* gInstalledFiles[] = {
     "PdfFilter.dll",
     "PdfPreview.dll",
     // those probably won't delete because in use
-    "SumatraPDF.exe",
+    "Apdf.exe",
     "RA-MICRO PDF Viewer.exe",
     // files no longer shipped, to be deleted
     "libmupdf.dll", // renamed to libsumatrapdf.dll in 3.7
@@ -55,8 +55,8 @@ const char* gInstalledFiles[] = {
     "UnRar.dll",
     "UnRar64.dll",
     // other files we might generate
-    "sumatrapdfprefs.dat",
-    "SumatraPDF-settings.txt",
+    "apdfprefs.dat",
+    "Apdf-settings.txt",
 };
 // clang-format on
 #endif
@@ -103,21 +103,11 @@ static void RemoveInstallDirFromPath(bool allUsers, Str installDir) {
 }
 
 static void RemoveInstalledFiles() {
-    // can't use GetExistingInstallationDir() anymore because we
-    // delete registry entries
-    Str dir = gCli->installer.installDir;
+    Str dir = gCli->installDir;
     if (len(dir) == 0) {
         log(StrL("RemoveInstalledFiles(): dir is empty\n"));
+        return;
     }
-#if 0
-    for (const char* s : gInstalledFiles) {
-        TempStr path = path::JoinTemp(dir, s);
-        bool ok = file::Delete(path);
-        if (ok) {
-            logf("RemoveInstalledFiles(): removed '%s'\n", path);
-        }
-    }
-#endif
     bool ok = dir::RemoveAll(dir);
     logf("RemoveInstalledFiles(): removed dir '%s', ok = %d\n", dir, (int)ok);
 }
@@ -133,7 +123,7 @@ static void UninstallerThread() {
     // a DELETE_ON_CLOSE copy from the temp directory
     TempStr exePath = GetInstalledExePathTemp();
     TempStr ownPath = GetSelfExePathTemp();
-    if (!path::IsSame(exePath, ownPath)) {
+    if (file::Exists(exePath) && !path::IsSame(exePath, ownPath)) {
         KillProcessesWithModule(exePath, true);
     }
 
@@ -157,7 +147,7 @@ static void UninstallerThread() {
     RemoveInstallDirFromPath(gCli->installer.allUsers, gCli->installer.installDir);
     RemoveInstalledFiles();
     LoggedDeleteRegValue(HKEY_CURRENT_USER, StrL("Software\\Microsoft\\Windows\\CurrentVersion\\Run"),
-                         StrL("SumatraPDF-QuickLook"));
+                         StrL("Apdf-QuickLook"));
 
     // always succeed, even for partial uninstallations
     success = true;
@@ -192,7 +182,7 @@ static void OnUninstallationFinished() {
     gButtonUninstaller = nullptr;
     gButtonExit = CreateDefaultButton(gHwndFrame, Tr("Close"), isRtl);
     gButtonExit->onClick = MkFunc0Void(OnButtonExit);
-    SetMsg(Tr("SumatraPDF has been uninstalled."), gMsgError ? kColorMsgFailed : kColorMsgOk);
+    SetMsg(fmt("%s has been uninstalled.", StrL(kAppName)), gMsgError ? kColorMsgFailed : kColorMsgOk);
     gMsgError = gFirstError;
     HwndRepaintNow(gHwndFrame);
 
@@ -214,7 +204,7 @@ static bool UninstallerOnWmCommand(WPARAM wp) {
 constexpr const WCHAR* kInstallerWindowClassName = L"SUMATRA_PDF_INSTALLER_FRAME";
 
 static void CreateUninstallerWindow() {
-    TempStr title = fmt(Tr("SumatraPDF %s Uninstaller").s, StrL(CURR_VERSION_STRA));
+    TempStr title = fmt(Tr("%s %s Uninstaller").s, StrL(kAppName), StrL(CURR_VERSION_STRA));
     int x = CW_USEDEFAULT;
     int y = CW_USEDEFAULT;
     int dx = GetInstallerWinDx();
@@ -229,7 +219,7 @@ static void CreateUninstallerWindow() {
     HwndResizeClientSize(gHwndFrame, dx, dy);
 
     auto isRtl = IsUIRtl();
-    gButtonUninstaller = CreateDefaultButton(gHwndFrame, Tr("Uninstall SumatraPDF"), isRtl);
+    gButtonUninstaller = CreateDefaultButton(gHwndFrame, fmt(Tr("Uninstall %s").s, StrL(kAppName)), isRtl);
     gButtonUninstaller->onClick = MkFunc0Void(OnButtonUninstall);
 }
 
@@ -368,7 +358,7 @@ static TempStr GetUninstallerPathInTemp() {
     DWORD res = ::GetTempPathW(dimof(tempDir), tempDir);
     ReportIf(res == 0 || res >= dimof(tempDir));
     TempStr dirA = ToUtf8Temp(tempDir);
-    return path::JoinTemp(dirA, StrL("Sumatra-Uninstaller.exe"));
+    return path::JoinTemp(dirA, StrL("Apdf-Uninstaller.exe"));
 }
 
 // %SystemRoot%\Temp, used instead of the per-user temp directory for the
@@ -382,7 +372,7 @@ static TempStr GetUninstallerPathInSystemTemp() {
         return {};
     }
     TempStr dir = path::JoinTemp(ToUtf8Temp(winDir), StrL("Temp"));
-    return path::JoinTemp(dir, StrL("Sumatra-Uninstaller.exe"));
+    return path::JoinTemp(dir, StrL("Apdf-Uninstaller.exe"));
 }
 
 // to be able to delete installation directory we must copy
@@ -480,8 +470,14 @@ static void RelaunchMaybeElevatedFromTempDirectory(Flags* cli) {
         log(StrL("  already running from temp dir\n"));
         return;
     }
+    file::Delete(installerTempPath);
     logf("  copying installer '%s' to '%s'\n", ownPath, installerTempPath);
     bool ok = file::Copy(installerTempPath, ownPath, false);
+    if (!ok) {
+        Sleep(100);
+        file::Delete(installerTempPath);
+        ok = file::Copy(installerTempPath, ownPath, false);
+    }
     if (!ok) {
         logf("  failed to copy installer\n");
         return;
@@ -573,7 +569,7 @@ int RunUninstaller() {
     if (!installerExists) {
         log(StrL("Uninstaller executable doesn't exist\n"));
         auto caption = Tr("Uninstallation failed");
-        auto msg = Tr("SumatraPDF installation not found.");
+        auto msg = fmt(Tr("%s installation not found.").s, StrL(kAppName));
         MsgBox(nullptr, msg, caption, MB_ICONEXCLAMATION | MB_OK);
         goto Exit;
     }
@@ -595,7 +591,7 @@ int RunUninstaller() {
         log(StrL("Previewer is installed\n"));
     }
 
-    gDefaultMsg = Tr("Are you sure you want to uninstall SumatraPDF?");
+    gDefaultMsg = fmt(Tr("Are you sure you want to uninstall %s?").s, StrL(kAppName));
 
     // unregister search filter and previewer to reduce
     // possibility of blocking

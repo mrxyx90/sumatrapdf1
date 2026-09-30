@@ -235,10 +235,10 @@ static AboutRow gAboutRows[] = {
     // isn't known until runtime (32/64-bit, debug)
     {StrL("version"), {}, {}},
     {StrL("built on"), StrL(__DATE__ " " __TIME__), {}},
-    {StrL("manual"), StrL("SumatraPDF manual"), StrL("https://www.sumatrapdfreader.org/docs/SumatraPDF-documentation")},
+    {StrL("manual"), StrL("Apdf manual"), StrL("https://www.sumatrapdfreader.org/docs/SumatraPDF-documentation")},
     {StrL("version history"), StrL("What's new"), StrL("https://www.sumatrapdfreader.org/docs/Version-history")},
-    {StrL("website"), StrL("SumatraPDF website"), Str(kWebsiteURL)},
-    {StrL("forums"), StrL("SumatraPDF forums"), StrL("https://github.com/sumatrapdfreader/sumatrapdf/discussions")},
+    {StrL("website"), StrL("Apdf website"), Str(kWebsiteURL)},
+    {StrL("forums"), StrL("Apdf forums"), StrL("https://github.com/sumatrapdfreader/sumatrapdf/discussions")},
     {StrL("licenses"), StrL("Various Open Source"),
      StrL("https://github.com/sumatrapdfreader/sumatrapdf/blob/master/AUTHORS")},
 #ifdef GIT_COMMIT_ID_STR
@@ -588,7 +588,7 @@ void AboutCtrl::UpdateLayout(Rect clientRc) {
 
 // Version, OS, WebView2, memory and similar facts for a bug report.
 static void AppendBugReportInfo(str::Builder& s) {
-    s.Append(fmt("SumatraPDF %s\n", GetAppVersionTemp()));
+    s.Append(fmt("%s %s\n", StrL(kAppName), GetAppVersionTemp()));
     s.Append(fmt("Built on: %s %s\n", StrL(__DATE__), StrL(__TIME__)));
     if (gitCommidId) {
         s.Append(fmt("Git: %s\n", gitCommidId));
@@ -1206,6 +1206,18 @@ struct HomeSearchEdit : Edit {
     MainWindow* win = nullptr;
 
     void WndProc(ControlBase::WndProcEvent* ev) {
+        if (ev->msg == WM_ERASEBKGND) {
+            HDC hdc = (HDC)ev->wparam;
+            RECT rc;
+            GetClientRect(ev->hwnd, &rc);
+            HBRUSH br = BackgroundBrush();
+            if (br) {
+                FillRect(hdc, &rc, br);
+            }
+            ev->result = 1;
+            ev->didHandle = true;
+            return;
+        }
         if (ev->msg == WM_KEYDOWN && ev->wparam == VK_DOWN) {
             // down from the search box moves into the file list (issue #1136),
             // restoring the column we left from when going up
@@ -1279,14 +1291,18 @@ static void HomeSearchFocusChanged(MainWindow* win) {
     HwndInvalidate(win->hwndCanvas);
 }
 
-static void PlaceHomeSearchEdit(MainWindow* win, const Rect& rcSearchBorder) {
+static bool PlaceHomeSearchEdit(MainWindow* win, const Rect& rcSearchBorder) {
     if (!win || !win->homeSearchLayout || rcSearchBorder.IsEmpty()) {
-        return;
+        return false;
     }
     int searchEditDy = DpiScale(kSearchEditDy);
     Rect rcEdit = {rcSearchBorder.x + 1, rcSearchBorder.y + 1, rcSearchBorder.dx - 2, searchEditDy};
+    if (rcEdit.IsEmpty()) {
+        return false;
+    }
     LayoutToSize(win->homeSearchLayout, rcEdit.Size());
     win->homeSearchLayout->SetBounds(rcEdit);
+    return true;
 }
 
 static void EnsureHomeSearchCreated(MainWindow* win) {
@@ -1299,14 +1315,18 @@ static void EnsureHomeSearchCreated(MainWindow* win) {
 
     Edit::CreateArgs args;
     args.parent = parent;
+    args.isVisible = false;
     args.font = font;
     // the home page draws the box around it, so the edit has no border of its own
     auto* e = new HomeSearchEdit();
     e->win = win;
+    // Avoid a separate background erase before the themed EDIT paint; that
+    // erase flashes under the Home-page search box.
+    e->shouldEraseBackground = false;
+    e->SetColors(ThemeWindowTextColor(), ThemeControlBackgroundColor());
     e->Create(args);
     // Edit::Create wired Edit::WndProc; re-route to HomeSearchEdit for Esc/Down/wheel
     e->onWndProc = MkMethod1<HomeSearchEdit, ControlBase::WndProcEvent*, &HomeSearchEdit::WndProc>(e);
-    e->SetColors(ThemeWindowTextColor(), ThemeControlBackgroundColor());
     e->onTextChanged = MkFunc0(HomeSearchTextChanged, win);
     e->onFocus = MkFunc0(HomeSearchFocusChanged, win);
     e->onKillFocus = MkFunc0(HomeSearchFocusChanged, win);
@@ -3181,7 +3201,10 @@ static void DrawHomePageLayout(HomePageLayout& l) {
 }
 
 static bool HomePageShouldShow(MainWindow* win) {
-    if (!win || !win->IsCurrentTabAbout()) {
+    if (!win) {
+        return false;
+    }
+    if (!win->IsCurrentTabAbout()) {
         return false;
     }
     if (!HasPermission(Perm::SavePreferences | Perm::DiskAccess)) {
@@ -3254,9 +3277,11 @@ void HomePageRelayout(MainWindow* win) {
         SaveHomeLayoutCache(l, filterText, win->homePageScrollY);
     }
     HomePageSyncChrome(l);
-    PlaceHomeSearchEdit(win, l.rcSearchBorder);
-    if (win->homeSearch) {
+    bool searchEditPlaced = PlaceHomeSearchEdit(win, l.rcSearchBorder);
+    if (searchEditPlaced && win->homeSearch) {
         win->homeSearch->SetIsVisible(true);
+    } else {
+        HomePageHideSearch(win);
     }
     UpdateHomeSearchCueBanner(win);
     UpdateHomeOverlayScrollbar(win);

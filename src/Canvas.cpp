@@ -1019,13 +1019,13 @@ static bool gWheelMsgRedirect = false;
 static bool gInMouseWheelScroll = false;
 
 static int ScrollLineAmount(int configuredAmount) {
-    return configuredAmount > 0 ? configuredAmount : 16;
+    return configuredAmount > 0 ? configuredAmount : 35;
 }
 
 #if IS_DEBUG
 bool Canvas_UnitTestScrollLineAmount() {
-    return ScrollLineAmount(16) == 16 && ScrollLineAmount(30) == 30 && ScrollLineAmount(1) == 1 &&
-           ScrollLineAmount(0) == 16 && ScrollLineAmount(-1) == 16;
+    return ScrollLineAmount(35) == 35 && ScrollLineAmount(30) == 30 && ScrollLineAmount(1) == 1 &&
+           ScrollLineAmount(0) == 35 && ScrollLineAmount(-1) == 35;
 }
 #endif
 
@@ -4065,7 +4065,7 @@ static bool DrawDocument(MainWindow* win, HDC hdc, Rect rcArea) {
     // when all-match painting was on (issue #5737).
     PaintAllFindMatches(win, &gfx);
     if (win->showSelection) {
-        PaintSelection(win, &gfx);
+        PaintSelection(win, &gfx, hdc);
     }
     // keep the floating selection toolbar aligned with the selection while
     // scrolling/zooming; hides itself when the selection is gone or off-screen
@@ -6285,9 +6285,9 @@ LRESULT CALLBACK WndProcCanvas(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
                 Rect rc = HwndClientRect(hwnd);
                 logf("redraw: WM_ERASEBKGND hwnd=0x%p (canvas) rc=(%d,%d,%d,%d)\n", hwnd, rc.x, rc.y, rc.dx, rc.dy);
             }
-            // markdown/CHM: fill now so leftover pixels from a previous tab
-            // cannot show through while WebView2 is resized
-            if (win && IsBrowserDocController(win->ctrl)) {
+            // Paint a theme-colored first surface; later fixed-page erases
+            // preserve the old pixels until WM_PAINT covers them.
+            if (!win || win->needsInitialCanvasBackground || IsBrowserDocController(win->ctrl)) {
                 HdcFillRect((HDC)wp, HwndClientRect(hwnd), ThemeMainWindowBackgroundColor());
                 return 1;
             }
@@ -6323,6 +6323,9 @@ LRESULT CALLBACK WndProcCanvas(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     // still deliver canvas messages; don't touch win->ctrl after that starts.
     if (win->isBeingClosed) {
         return isWheel ? 0 : DefWindowProc(hwnd, msg, wp, lp);
+    }
+    if (msg == WM_PAINT && HwndIsVisible(win->hwndFrame)) {
+        win->needsInitialCanvasBackground = false;
     }
 
     // reveal/hide the floating overlay toolbar as the mouse approaches the top;
