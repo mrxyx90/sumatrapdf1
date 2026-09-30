@@ -745,17 +745,23 @@ typedef struct {
 
 // clang-format off
 static LetterInfo gLetters[] = {
-    {'A', gCol1, gCol1Shadow, -3.f, 0, 0, 0},
-    {'P', gCol2, gCol2Shadow, 0.f, 0, 0, 0},
-    {'D', gCol3, gCol3Shadow, 2.f, -2.f, 0, 0},
-    {'F', gCol4, gCol4Shadow, 0.f, -2.4f, 0, 0}
+    {'S', gCol1, gCol1Shadow, -3.f, 0, 0, 0},
+    {'U', gCol2, gCol2Shadow, 0.f, 0, 0, 0},
+    {'M', gCol3, gCol3Shadow, 2.f, -2.f, 0, 0},
+    {'A', gCol4, gCol4Shadow, 0.f, -2.4f, 0, 0},
+    {'T', gCol5, gCol5Shadow, 0.f, 0, 0, 0},
+    {'R', gCol5, gCol5Shadow, 2.3f, -1.4f, 0, 0},
+    {'A', gCol4, gCol4Shadow, 0.f, 0, 0, 0},
+    {'P', gCol3, gCol3Shadow, 0.f, -2.3f, 0, 0},
+    {'D', gCol2, gCol2Shadow, 0.f, 3.f, 0, 0},
+    {'F', gCol1, gCol1Shadow, 0.f, 0, 0, 0}
 };
 // clang-format on
 
 constexpr int kSumatraLettersCount = dimofi(gLetters);
 
 static void SetLettersSumatraUpTo(size_t n) {
-    Str s = StrL("APDF");
+    Str s = StrL("SUMATRAPDF");
     for (size_t i = 0; i < kSumatraLettersCount; i++) {
         char c = ' ';
         if (i < n) {
