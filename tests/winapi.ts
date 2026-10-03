@@ -81,6 +81,9 @@ const user32 = dlopen("user32.dll", {
   GetSubMenu: { args: [FFIType.u64, FFIType.i32], returns: FFIType.u64 },
   GetMenuStringW: { args: [FFIType.u64, FFIType.u32, FFIType.ptr, FFIType.i32, FFIType.u32], returns: FFIType.i32 },
   GetMenuState: { args: [FFIType.u64, FFIType.u32, FFIType.u32], returns: FFIType.u32 },
+  OpenClipboard: { args: [FFIType.ptr], returns: FFIType.bool },
+  CloseClipboard: { args: [], returns: FFIType.bool },
+  GetClipboardData: { args: [FFIType.u32], returns: FFIType.u64 },
 });
 
 // GDI + GDI+ for capturing a window to a PNG (see captureWindowToPng). Capturing
@@ -140,6 +143,10 @@ const shell32 = dlopen("shell32.dll", {
   SHAppBarMessage: { args: [FFIType.u32, FFIType.ptr], returns: FFIType.u64 },
 });
 
+const dwmapi = dlopen("dwmapi.dll", {
+  DwmGetWindowAttribute: { args: [FFIType.ptr, FFIType.u32, FFIType.ptr, FFIType.u32], returns: FFIType.i32 },
+});
+
 const gdiplus = dlopen("gdiplus.dll", {
   GdiplusStartup: { args: [FFIType.ptr, FFIType.ptr, FFIType.ptr], returns: FFIType.u32 },
   GdipCreateBitmapFromHBITMAP: { args: [FFIType.u64, FFIType.u64, FFIType.ptr], returns: FFIType.u32 },
@@ -176,6 +183,9 @@ const kernel32 = dlopen("kernel32.dll", {
     returns: FFIType.u64,
   },
   DeleteFileW: { args: [FFIType.ptr], returns: FFIType.bool },
+  GlobalLock: { args: [FFIType.u64], returns: FFIType.ptr },
+  GlobalUnlock: { args: [FFIType.u64], returns: FFIType.bool },
+  GlobalSize: { args: [FFIType.u64], returns: FFIType.u64 },
 });
 
 // Authenticode helpers (mirror src/base/Crypto.cpp GetExecutableSignerTemp / IsPEFileSigned).
@@ -706,6 +716,7 @@ export function moveWindow(hwnd: number, x: number, y: number, w: number, h: num
 export const SWP_NOZORDER = 0x0004;
 export const SWP_NOACTIVATE = 0x0010;
 export const SWP_FRAMECHANGED = 0x0020;
+export const SWP_NOSENDCHANGING = 0x0400;
 export const GWL_STYLE = -16;
 export const GWL_EXSTYLE = -20;
 export const WS_MAXIMIZE = 0x01000000;
@@ -889,6 +900,47 @@ export function getWindowText(hwnd: number): string {
   return s;
 }
 
+function readClipboardText(): string | null {
+  const CF_UNICODETEXT = 13;
+  if (!user32.symbols.OpenClipboard(null)) {
+    return null;
+  }
+  try {
+    const data = user32.symbols.GetClipboardData(CF_UNICODETEXT);
+    if (!data) {
+      return "";
+    }
+    const mem = kernel32.symbols.GlobalLock(data);
+    if (!mem) {
+      throw new Error(`GlobalLock failed: ${kernel32.symbols.GetLastError()}`);
+    }
+    try {
+      const size = Number(kernel32.symbols.GlobalSize(data));
+      const text = Buffer.from(toArrayBuffer(mem, 0, size)).toString("utf16le");
+      const end = text.indexOf("\0");
+      return end >= 0 ? text.slice(0, end) : text;
+    } finally {
+      kernel32.symbols.GlobalUnlock(data);
+    }
+  } finally {
+    user32.symbols.CloseClipboard();
+  }
+}
+
+export async function getClipboardText(timeoutMs = 1000): Promise<string> {
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    const text = readClipboardText();
+    if (text !== null) {
+      return text;
+    }
+    if (Date.now() >= deadline) {
+      throw new Error(`OpenClipboard failed: ${kernel32.symbols.GetLastError()}`);
+    }
+    await sleep(10);
+  }
+}
+
 // Text of a control (Edit, Static, ...) in another process. GetWindowTextW only
 // returns the caption of foreign windows, so child controls come back empty --
 // WM_GETTEXT is marshalled across processes by user32 and does work.
@@ -924,6 +976,15 @@ export function getWindowRect(hwnd: number): Rect {
   const buf = new Int32Array(4);
   user32.symbols.GetWindowRect(hwnd, ptr(buf));
   return { left: buf[0], top: buf[1], right: buf[2], bottom: buf[3] };
+}
+
+// the part of the window DWM shows (window rect minus invisible resize borders),
+// in screen coordinates; it's what Alt+PrtScn captures
+export function getExtendedFrameBounds(hwnd: number): Rect {
+  const DWMWA_EXTENDED_FRAME_BOUNDS = 9;
+  const buf = new Int32Array(4);
+  dwmapi.symbols.DwmGetWindowAttribute(hwnd, DWMWA_EXTENDED_FRAME_BOUNDS, ptr(buf), buf.byteLength);
+  return { left: buf[0]!, top: buf[1]!, right: buf[2]!, bottom: buf[3]! };
 }
 
 // A hidden window keeps its last rect, so getWindowRect can't tell you whether a

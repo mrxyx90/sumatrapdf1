@@ -2555,7 +2555,7 @@ static void ReplaceDocumentInCurrentTab(LoadArgs* args, DocController* ctrl, Fil
     bool showToc = showTocByDefault(path, dmForToc ? dmForToc->GetEngine() : nullptr);
     bool showAsFullScreen = WIN_STATE_FULLSCREEN == gSettings->windowState;
     int showType = SW_NORMAL;
-    if (gSettings->windowState == WIN_STATE_MAXIMIZED || showAsFullScreen) {
+    if (gSettings->windowState == WIN_STATE_MAXIMIZED) {
         showType = SW_MAXIMIZE;
     }
 
@@ -2565,9 +2565,10 @@ static void ReplaceDocumentInCurrentTab(LoadArgs* args, DocController* ctrl, Fil
         ss.page = ParseStoredPagePos(fs->pageNo).pageNo;
         displayMode = DisplayModeFromString(fs->displayMode, DisplayMode::Automatic);
         showAsFullScreen = WIN_STATE_FULLSCREEN == fs->windowState;
-        if (fs->windowState == WIN_STATE_NORMAL) {
+        // fullscreen enters from the normal window (see ShowMainWindow)
+        if (fs->windowState == WIN_STATE_NORMAL || showAsFullScreen) {
             showType = SW_NORMAL;
-        } else if (fs->windowState == WIN_STATE_MAXIMIZED || showAsFullScreen) {
+        } else if (fs->windowState == WIN_STATE_MAXIMIZED) {
             showType = SW_MAXIMIZE;
         } else if (fs->windowState == WIN_STATE_MINIMIZED) {
             showType = SW_MINIMIZE;
@@ -2844,19 +2845,13 @@ static void ReplaceDocumentInCurrentTab(LoadArgs* args, DocController* ctrl, Fil
             }
         }
 
-#if 0
-        // fix https://github.com/sumatrapdfreader/sumatrapdf/issues/5456
-        // bad initial layout with RememberOpenedFiles = false
-        // it's redundant with LayoutAndFocusOnStartup()
-
         // Fire deferred SWP_FRAMECHANGED for custom caption so the
         // non-client area is recalculated and the client rect is correct.
         // ShowMainWindow normally does this, but this code path bypasses it.
-        if (win->tabsInTitlebar) {
+        if (args->showWin && args->isNewWindow && win->tabsInTitlebar) {
             uint swpFlags = SWP_FRAMECHANGED | SWP_NOZORDER | SWP_NOSIZE | SWP_NOMOVE;
             SetWindowPos(win->hwndFrame, nullptr, 0, 0, 0, 0, swpFlags);
         }
-#endif
 
         if (win) {
             UpdateWindow(win->hwndFrame);
@@ -3548,6 +3543,11 @@ static void PrepareStartupWindowRegion(MainWindow* win) {
     HWND hwnd = win->hwndFrame;
     if (!win->tabsInTitlebar || HwndIsVisible(hwnd) || !IsZoomed(hwnd) || win->isFullScreen || win->presentation) {
         return;
+    }
+
+    // Install the final clip before DWM sees the first visible surface.
+    win->hasStartupWindowRegion = ResetMaximizedWindowRegion(hwnd);
+}
     }
     // Install the final clip before DWM sees the first visible surface.
     win->hasStartupWindowRegion = ResetMaximizedWindowRegion(hwnd);
@@ -5305,6 +5305,24 @@ void MainWindowRerender(MainWindow* win, bool includeNonClientArea) {
     } else {
         win->RedrawAll(true);
     }
+}
+
+// re-render one page (e.g. an annotation on it changed): unlike MainWindowRerender
+// leaves the other pages, their thumbnails and the rest of the window alone
+void RerenderTabPage(WindowTab* tab, int pageNo) {
+    DisplayModel* dm = tab ? tab->AsFixed() : nullptr;
+    if (!dm || pageNo < 1 || pageNo > dm->PageCount()) {
+        return;
+    }
+    gRenderCache->Invalidate(dm, pageNo, dm->GetEngine()->PageMediabox(pageNo));
+    MainWindow* win = tab->win;
+    if (win->CurrentTab() != tab) {
+        return;
+    }
+    if (win->pageThumbs && win->pageThumbs->active) {
+        win->pageThumbs->RefreshPage(pageNo);
+    }
+    HwndInvalidate(win->hwndCanvas);
 }
 
 static void RerenderEverything() {
@@ -7933,11 +7951,12 @@ static bool RelayoutFrame(MainWindow* win, bool updateToolbars, int sidebarDx) {
     // inset by border for resize hit-testing (only with custom caption, not when maximized/fullscreen)
     if (win->tabsInTitlebar && !IsZoomed(win->hwndFrame) && !win->isFullScreen && !win->presentation) {
         rc.x += kFrameBorderSize;
-        // top border is kFrameBorderSize - 1 because 1px is already NC area
+        // on Wine top border is kFrameBorderSize - 1 because 1px is already NC area
         // (WM_NCCALCSIZE keeps 1px NC to prevent DWM transparent flash)
-        rc.y += kFrameBorderSize - 1;
+        int topBorder = IsRunningOnWine() ? kFrameBorderSize - 1 : kFrameBorderSize;
+        rc.y += topBorder;
         rc.dx -= 2 * kFrameBorderSize;
-        rc.dy -= kFrameBorderSize + (kFrameBorderSize - 1);
+        rc.dy -= kFrameBorderSize + topBorder;
     }
 
     // hide overlay scrollbars before relayout so they don't appear at
@@ -7954,12 +7973,14 @@ static bool RelayoutFrame(MainWindow* win, bool updateToolbars, int sidebarDx) {
     // would hide the frame on every mouse move and flash the TOC through the
     // transparent WebView2 in the strip the canvas just inherited
     bool isSplitterDrag = sidebarDx != -1;
+    // dragging the splitter between the sidebar panels is just as live
+    bool isLiveDrag = isSplitterDrag || win->uiState.panelsDrag;
     // Fullscreen changes both the canvas origin and size while frame redraw is
     // disabled. Preserving its old screen bits copies the normal-window tabs,
     // toolbar, and document into the fullscreen surface until a later paint.
     bool discardCanvasBits = win->suppressFrameRedraw || (isSplitterDrag && IsBrowserDocController(win->ctrl));
     bool suppressIntermediateRedraws =
-        !isSplitterDrag && !isFrameResize && !win->suppressFrameRedraw && HwndIsVisible(win->hwndFrame);
+        !isLiveDrag && !isFrameResize && !win->suppressFrameRedraw && HwndIsVisible(win->hwndFrame);
     if (suppressIntermediateRedraws) {
         // suppress intermediate repaints during relayout
         SendMessageW(win->hwndFrame, WM_SETREDRAW, FALSE, 0);
@@ -8225,7 +8246,11 @@ static bool RelayoutFrame(MainWindow* win, bool updateToolbars, int sidebarDx) {
     }
     // during a live splitter drag we must paint synchronously: WM_PAINT is
     // starved by the stream of WM_MOUSEMOVE messages
-    if (isSplitterDrag) {
+    if (win->uiState.panelsDrag && bottomVisible) {
+        // the bottom panel moved: its children (filter box) aren't invalidated by that
+        RedrawWindow(bottomHwnd, nullptr, nullptr, RDW_INVALIDATE | RDW_ALLCHILDREN);
+    }
+    if (isLiveDrag) {
         RedrawWindow(win->hwndFrame, nullptr, nullptr, RDW_UPDATENOW | RDW_ALLCHILDREN);
     }
     if (updateToolbars && win->tabsInTitlebar && !win->isFullScreen) {
@@ -8328,6 +8353,7 @@ static void FrameUpdateUi(MainWindow* win) {
     // RelayoutFrame skips when nothing layout-affecting changed (a force is
     // requested by clearing win->uiState.layout)
     bool didLayout = RelayoutFrame(win, updateToolbars, sidebarDx);
+    ui.panelsDrag = false;
     if (!didLayout) {
         // layout snapshot unchanged, so RelayoutFrame returned early; still
         // finish a LoadDocument Relayout that was waiting for the canvas
@@ -8415,6 +8441,9 @@ void ScheduleUiUpdate(MainWindow* win, u32 flags, int sidebarDx) {
     }
     if (flags & kUiSidebarDirty) {
         ui.sidebarDirty = true;
+    }
+    if (flags & kUiPanelsDrag) {
+        ui.panelsDrag = true;
     }
     if (ui.updatePending) {
         return; // one FrameUpdateUi is already queued; it'll pick this up
@@ -10083,7 +10112,7 @@ static void OnPanelsSplitterMove(VirtSplitter::MoveEvent* ev) {
     gSettings->tocDy = tocDy;
     // the sidebar width is unchanged (win->sidebarDx); kUiNoToolbars makes
     // the relayout run unconditionally
-    ScheduleUiUpdate(win, kUiRelayout | kUiNoToolbars);
+    ScheduleUiUpdate(win, kUiRelayout | kUiNoToolbars | kUiPanelsDrag);
 }
 
 static int SidebarExtraDx(MainWindow* win) {
@@ -10155,14 +10184,8 @@ static void AdjustFrameForSidebar(MainWindow* win, bool show) {
         if (DisplayModel* dm = win->AsFixed()) {
             unused = dm->UnusedCanvasDx();
         }
-        int grow = extra - unused;
-        if (grow < 0) {
-            grow = 0;
-        }
         int spare = work.dx - wr.dx;
-        if (grow > spare) {
-            grow = spare;
-        }
+        int grow = ClampI(extra - unused, 0, spare);
         if (grow <= 0) {
             win->sidebarGrewFrameDx = 0;
             return;
@@ -14786,6 +14809,11 @@ static LRESULT CustomCaptionFrameProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp,
                 *callDef = false;
                 return 0;
             }
+            // painting the non-client area ourselves turns off DWM frame rendering:
+            // the maximized window's overhang then counts as visible (#6259)
+            if (!IsRunningOnWine()) {
+                break;
+            }
             Vec<Rect> strips;
             GetFrameNcStrips(win, strips);
             HDC hdc = len(strips) > 0 ? GetWindowDC(hwnd) : nullptr;
@@ -14913,10 +14941,16 @@ static LRESULT CustomCaptionFrameProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp,
                     r->right -= frameX;
                     r->bottom -= frameY;
                 }
-            } else if (!isFullScreen) {
+            } else if (!isFullScreen && IsRunningOnWine()) {
                 // keep 1px non-client area at top so DWM preserves content
                 // during resize (returning 0 makes DWM clear the surface)
                 r->top += 1;
+            } else if (!isFullScreen) {
+                // keep the standard side / bottom borders, DWM draws them as invisible
+                // resize borders; the caption is ours
+                int top = r->top;
+                DefWindowProcW(hwnd, msg, wp, lp);
+                r->top = top;
             }
             if (IsRunningOnWine()) {
                 logf("WM_NCCALCSIZE: after=(%ld,%ld,%ld,%ld) clientDy=%ld cyFrame=%d cyCaption=%d\n", r->left, r->top,
@@ -16321,9 +16355,8 @@ static bool SetupPluginMode(Flags& i) {
             int pageNo;
             if (str::TrimPrefixI(pageArg, StrL("page=")) && !str::IsNull(str::Parse(pageArg, "%d%$", &pageNo))) {
                 i.pageNumber = pageNo;
-            } else if (str::TrimPrefixI(part, StrL("nameddest=")) && part) {
-                i.namedDest = str::Dup(part);
-            } else if (!str::ContainsChar(part, '=') && part) {
+            } else if ((str::TrimPrefixI(part, StrL("nameddest=")) || !str::ContainsChar(part, '=')) && part) {
+                // "nameddest=foo" or a bare fragment with no '='
                 i.namedDest = str::Dup(part);
             }
         }
@@ -17787,7 +17820,7 @@ int fz_redirect_io_to_existing_console();
 #define FZ_ENABLE_JS 1
 #define FZ_ENABLE_PDF 1
 #define FZ_ENABLE_BARCODE 0
-#define FZ_VERSION "1.28.2"
+#define FZ_VERSION "1.28.5"
 
 using MutoolFunc = int (*)(int argc, char* argv[]);
 
@@ -18205,6 +18238,10 @@ void CrashHandlerSetSettings(Str settings) {
         return;
     }
     gSettingsFile = str::Dup(a, settings);
+    // The file is UTF-8 BOM + CRLF. This comment is LF text; a BOM or CR
+    // here shows up as a blank line after every settings line.
+    str::TrimPrefix(gSettingsFile, StrL(kUtf8Bom));
+    str::NormalizeNewlinesToLFInPlace(gSettingsFile);
 }
 
 // Message from MuPDF's uncaught-throw abort (error.c). Looked up at crash time
@@ -18892,12 +18929,10 @@ int APIENTRY WinMain(_In_ HINSTANCE /*hInstance*/, _In_opt_ HINSTANCE /*hPrevIns
             Str path = flags.fileNames[n];
             bool isFirstWindow = (0 == n);
             bool savedInNewWindow = flags.inNewWindow;
-            if (reuseInNewWindow && n == 0) {
+            if ((reuseInNewWindow && n == 0) || userNewWindowEach) {
                 flags.inNewWindow = true;
             } else if (userNewWindowTabs) {
                 flags.inNewWindow = (n == 0);
-            } else if (userNewWindowEach) {
-                flags.inNewWindow = true;
             }
             OpenUsingDDE(existingHwnd, path, flags, isFirstWindow);
             flags.inNewWindow = savedInNewWindow;
