@@ -368,7 +368,7 @@ static void PopulateTabCloseFlags(AppCommandCtx& ctx) {
     ctx.nTabs = nTabs;
     WindowTab* currTab = ctx.tab;
     int tabIdx = ctx.win->GetTabIdx(currTab);
-    ctx.canCloseTabsToRight = tabIdx < (nTabs - 1);
+    ctx.canCloseTabsToRight = (tabIdx >= 0) && (tabIdx < (nTabs - 1));
     ctx.canCloseTabsToLeft = false;
     int nFirstDocTab = 0;
     for (int i = 0; i < nTabs; i++) {

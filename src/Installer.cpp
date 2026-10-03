@@ -1087,7 +1087,7 @@ static bool CopySelfToDir(Str destDir) {
             Tr("Not enough free disk space to copy SumatraPDF.exe to the installation directory.\n\n"
                "Free up space on this drive and try again."));
     } else {
-        NotifyFailed(Tr("Couldn't copy SumatraPDF.exe to the installation directory"));
+        NotifyFailed(fmt(Tr("Couldn't copy %s to the installation directory").s, Str(kExeName)));
     }
     return false;
 }
@@ -1581,10 +1581,10 @@ static void OnInstallationFinished(Flags* cli) {
     DeleteWnd(&gWnd->progressBar);
     auto isRtl = IsUIRtl();
     if (!cli->installer.fastInstall) {
-        gWnd->btnRunSumatra = CreateDefaultButton(gWnd->hwnd, Tr("Start SumatraPDF"), isRtl);
+        gWnd->btnRunSumatra = CreateDefaultButton(gWnd->hwnd, fmt(Tr("Start %s").s, StrL(kAppName)), isRtl);
         gWnd->btnRunSumatra->onClick = MkFunc0Void(OnButtonStartSumatra);
     }
-    SetMsg(Tr("Thank you! SumatraPDF has been installed."), kColorMsgOk);
+    SetMsg(fmt(Tr("Thank you! %s has been installed.").s, StrL(kAppName)), kColorMsgOk);
     gMsgError = gFirstError;
     HwndRepaintNow(gWnd->hwnd);
 
@@ -1792,7 +1792,7 @@ static void OnButtonBrowse(InstallerWnd* wnd) {
         installDir = path::GetDirTemp(installDir);
     }
 
-    auto caption = Tr("Select the folder where SumatraPDF should be installed:");
+    auto caption = fmt(Tr("Select the folder where %s should be installed:").s, StrL(kAppName));
     TempStr installPath = BrowseForFolderTemp(wnd->hwnd, installDir, caption);
     if (len(installPath) == 0) {
         HwndSetFocus(wnd->btnBrowseDir->hwnd);
@@ -2366,10 +2366,10 @@ static bool ShouldInstallMismatchedArch(HWND hwndParent) {
         flags |= TDF_RTL_LAYOUT;
     }
     dialogConfig.cbSize = sizeof(TASKDIALOGCONFIG);
-    s = Tr("Installing 32-bit SumatraPDF on 64-bit OS");
+    s = fmt(Tr("Installing 32-bit %s on 64-bit OS").s, StrL(kAppName));
     dialogConfig.pszWindowTitle = CWStrTemp(s);
     // dialogConfig.pszMainInstruction = mainInstr;
-    s = Tr("You're installing 32-bit SumatraPDF on 64-bit OS.\nWould you like to download\n64-bit version?");
+    s = fmt(Tr("You're installing 32-bit %s on 64-bit OS.\nWould you like to download\n64-bit version?").s, StrL(kAppName));
     dialogConfig.pszContent = CWStrTemp(s);
     dialogConfig.nDefaultButton = kBtnIdContinue;
     dialogConfig.dwFlags = (TASKDIALOG_FLAGS)flags;

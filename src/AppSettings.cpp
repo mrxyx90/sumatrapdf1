@@ -590,6 +590,9 @@ static void RememberSessionState() {
                 selectedDocOrdinal = docOrdinal;
             }
         }
+        if (cur && cur->IsAboutTab()) {
+            selectedDocOrdinal = 0;
+        }
         windowState->tabIndex = selectedDocOrdinal;
         RememberDefaultWindowPosition(win);
         windowState->windowState = gSettings->windowState;

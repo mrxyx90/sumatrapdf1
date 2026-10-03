@@ -37,6 +37,7 @@ extern const char* gIconHomeList;
 extern const char* gIconHomeThumbnails;
 extern const char* gIconSidebarBookmarks;
 extern const char* gIconSidebarFavorites;
+extern const char* gIconHome;
 extern const char* gIconPin;
 extern const char* gIconEditAnnotations;
 extern const char* gIconAnnotHighlight;
@@ -59,7 +60,6 @@ extern const char* gIconAnnotCaret;
 extern const char* gIconAnnotFileAttachment;
 extern const char* gIconTrash;
 extern const char* gIconArrowUp;
-extern const char* gIconHome;
 
 struct Pixmap;
 

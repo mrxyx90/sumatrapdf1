@@ -646,6 +646,13 @@ void ChmModel::OnDocumentComplete(Str url) {
 // loading if returns false.
 // for HtmlWindowCallback (called through htmlWindowCb)
 bool ChmModel::OnBeforeNavigate(Str url, bool newWindow) {
+    // External-to-external navigation is already handled by Chromium. Avoid
+    // even touching CHM scroll state on these clicks; this callback is on the
+    // WebView2 NavigationStarting path and must stay as cheap as possible.
+    if (!newWindow && IsExternalUrl(currentPageUrl) && IsExternalUrl(url)) {
+        return true;
+    }
+
     // save scroll pos of the page we're leaving, unless DisplayPage() already
     // saved it before triggering this programmatic navigation
     if (skipNextBeforeNavigateScrollSave) {
@@ -656,14 +663,19 @@ bool ChmModel::OnBeforeNavigate(Str url, bool newWindow) {
         SaveHtmlScrollPos();
     }
 
-    // ensure that JavaScript doesn't keep the focus
-    // in the HtmlWindow when a new page is loaded
-    if (cb) {
-        cb->FocusFrame(false);
+    // Once an external page is already hosted by WebView2 (for example
+    // Google), keep subsequent http(s) navigations inside WebView2. This avoids
+    // bouncing every click back through Sumatra's external-link handler.
+    // New-window requests still leave the embedded browser.
+    if (!newWindow && IsExternalUrl(currentPageUrl) && IsExternalUrl(url)) {
+        return true;
     }
 
     // external links and new-window requests leave the embedded browser
-    // (same as FixedPageUI / SimpleBrowserWindow; issue #5920 for downloads)
+    // (same as FixedPageUI / SimpleBrowserWindow; issue #5920 for downloads).
+    // Do this before FocusFrame(false): changing focus on WebView2 during
+    // NavigationStarting can synchronously re-enter the host window procedure
+    // and make external navigations appear to hang for several seconds.
     if (newWindow || IsExternalUrl(url)) {
         if (url && cb) {
             IPageDestination* dest = NewChmNamedDest(nullptr, url, 1);
@@ -671,6 +683,13 @@ bool ChmModel::OnBeforeNavigate(Str url, bool newWindow) {
             delete dest;
         }
         return false;
+    }
+
+    // Only internal CHM navigation needs to move focus back to the frame.
+    // Avoid doing this for WebView2 external navigations, where it can block
+    // the NavigationStarting callback.
+    if (cb) {
+        cb->FocusFrame(false);
     }
 
     return true;

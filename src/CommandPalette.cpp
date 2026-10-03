@@ -53,6 +53,7 @@
 #include "AnnotEditToolbar.h"
 #include "AnnotPlacement.h"
 #include "PageThumbnails.h"
+#include "FloatingToolbar.h"
 #include "CommandPalette.h"
 
 struct MainWindow;
@@ -267,6 +268,16 @@ Str CommandPaletteSkipWS(Str s) {
 }
 
 CommandPaletteWnd* gCommandPaletteWnd = nullptr;
+
+bool IsCommandPaletteOpen(MainWindow* win) {
+    if (!gCommandPaletteWnd || !gCommandPaletteWnd->hwnd || !IsWindow(gCommandPaletteWnd->hwnd)) {
+        return false;
+    }
+    if (win && gCommandPaletteWnd->win != win) {
+        return false;
+    }
+    return true;
+}
 static int gPaletteOpDepth = 0;
 static HWND gHwndToActivateOnClose = nullptr;
 static WindowTab* gTabToSelectOnClose = nullptr;
@@ -312,6 +323,7 @@ void SafeDeleteCommandPaletteWnd() {
     auto* tmp = gCommandPaletteWnd;
     gCommandPaletteWnd = nullptr;
     delete tmp;
+    UpdateFloatingToolbarActiveState(win);
     if (gHwndToActivateOnClose) {
         HWND fg = GetForegroundWindow();
         if (!fg || fg == gHwndToActivateOnClose) {

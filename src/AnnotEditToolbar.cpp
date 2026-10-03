@@ -2638,7 +2638,7 @@ bool StartFreeTextInPlaceEdit(MainWindow* win, Annotation* annot) {
 // Edit the free text annotation under `pt`, if there is one and we are in
 // Edit PDF mode.
 bool StartFreeTextInPlaceEditAt(MainWindow* win, Point pt) {
-    if (!win || !win->pdfAnnotationsToolbarEnabled) {
+    if (!win) {
         return false;
     }
     WindowTab* tab = win->CurrentTab();
@@ -2711,7 +2711,7 @@ void UpdateAnnotEditToolbar(MainWindow* win) {
     Annotation* annot = tab ? tab->selectedAnnotation : nullptr;
     AnnotEditToolbar* tb = win->annotEditToolbar;
     if (tb && tb->editingContents) {
-        if (!win->pdfAnnotationsToolbarEnabled || !AnnotationIsLive(annot) || annot != tb->annot) {
+        if (!AnnotationIsLive(annot) || annot != tb->annot) {
             RestoreCanvasFocus(tb);
             DestroyContentsEditor(tb);
         } else {
@@ -2725,7 +2725,7 @@ void UpdateAnnotEditToolbar(MainWindow* win) {
             return;
         }
     }
-    if (!win->pdfAnnotationsToolbarEnabled || !AnnotationIsLive(annot)) {
+    if (!AnnotationIsLive(annot)) {
         HideAnnotEditToolbar(win);
         return;
     }
@@ -2758,7 +2758,7 @@ void RepositionAnnotEditToolbar(MainWindow* win) {
         // layout can hide the row while pageOnScreen is empty; show it again
         // once the selected annot has canvas bounds (issue #6111)
         WindowTab* tab = win ? win->CurrentTab() : nullptr;
-        if (win && win->pdfAnnotationsToolbarEnabled && tab && tab->selectedAnnotation) {
+        if (win && tab && tab->selectedAnnotation) {
             UpdateAnnotEditToolbar(win);
         }
         return;
