@@ -87,6 +87,7 @@ bool Accelerators_UnitTestCustomShortcutShown();
 bool ShortcutParse_UnitTestShiftedPunct();
 bool AnnotSearch_UnitTests();
 void ReadAloudHighlight_UnitTests();
+bool RenderCache_UnitTestCookieUnlocked();
 
 static void ParseFileArgsTest() {
     FileArgs* fa = ParseFileArgs(StrL("C:\\foo.pdf?page=4"));
@@ -302,6 +303,12 @@ static void assertGoToNextPage3(int cmdId) {
 static void parseCommandsTest() {
     CommandArg* arg;
 
+    {
+        // names match case-insensitively, so a re-cased name keeps old shortcuts working
+        utassert(GetCommandIdByName(StrL("CmdOpenWithFoxit")) == CmdOpenWithFoxit);
+        utassert(GetCommandIdByName(StrL("CmdOpenWithFoxIt")) == CmdOpenWithFoxit);
+        utassert(GetCommandIdByName(StrL("cmdopenwithfoxitphantom")) == CmdOpenWithFoxitPhantom);
+    }
     {
         auto* cmd = CreateCommandFromDefinition(StrL(" CmdCreateAnnotHighlight   #00ff00 openEdit copytoclipboard"));
         utassert(cmd->origId == CmdCreateAnnotHighlight);
@@ -631,6 +638,7 @@ int RunAppUnitTests(bool forAi) {
     utassert(Accelerators_UnitTestCustomShortcutShown());
     utassert(ShortcutParse_UnitTestShiftedPunct());
     utassert(AnnotSearch_UnitTests());
+    utassert(RenderCache_UnitTestCookieUnlocked());
     ReadAloudHighlight_UnitTests();
 #endif
     return utassert_print_results();
