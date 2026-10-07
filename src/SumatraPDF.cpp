@@ -3531,10 +3531,6 @@ static void PrepareStartupWindowRegion(MainWindow* win) {
     // Install the final clip before DWM sees the first visible surface.
     win->hasStartupWindowRegion = ResetMaximizedWindowRegion(hwnd);
 }
-    }
-    // Install the final clip before DWM sees the first visible surface.
-    win->hasStartupWindowRegion = ResetMaximizedWindowRegion(hwnd);
-}
 
 void ShowMainWindow(MainWindow* win, int windowState) {
     bool wasVisible = HwndIsVisible(win->hwndFrame);
