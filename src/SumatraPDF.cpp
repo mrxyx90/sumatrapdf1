@@ -282,6 +282,7 @@ static void EnsureNextPrevDirScan(Str filePath);
 
 static void CloseDocumentInCurrentTab(MainWindow* /*win*/, bool keepUIEnabled, bool deleteModel);
 static void SetFrameTitleForTab(WindowTab* tab, bool needRefresh);
+static void SetNativeFrameTitle(MainWindow* win, Str title);
 static void OnSidebarSplitterMove(VirtSplitter::MoveEvent* /*ev*/);
 static void OnPanelsSplitterMove(VirtSplitter::MoveEvent* /*ev*/);
 
