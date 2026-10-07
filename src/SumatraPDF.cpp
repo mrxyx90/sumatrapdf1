@@ -2066,7 +2066,7 @@ void ControllerCallbackHandler::PageNoChanged(DocController* ctrl, int pageNo) {
             tab->SetDisplayName({});
             TabsOnChangedDoc(win);
             SetFrameTitleForTab(tab, false);
-            HwndSetText(win->hwndFrame, tab->frameTitle);
+            SetNativeFrameTitle(win, tab->frameTitle);
         }
     }
 
@@ -2254,6 +2254,13 @@ bool OpenDocumentFromMemory(MainWindow* win, Str data, Str nameHint) {
     return true;
 }
 
+static void SetNativeFrameTitle(MainWindow* win, Str title) {
+    if (!win || win->tabsInTitlebar) {
+        return;
+    }
+    HwndSetText(win->hwndFrame, title);
+}
+
 static void SetFrameTitleForTab(WindowTab* tab, bool needRefresh) {
     Str titlePath = tab->displayName ? Str(tab->displayName) : tab->filePath;
     TempStr embeddedFileName = ParseEmbeddedPdfName(titlePath).fileName;
@@ -2329,7 +2336,7 @@ static void UpdateUiForCurrentTab(MainWindow* win) {
 
     UpdateFindbox(win);
 
-    HwndSetText(win->hwndFrame, win->CurrentTab()->frameTitle);
+    SetNativeFrameTitle(win, win->CurrentTab()->frameTitle);
 
     bool onlyNumbers = !win->ctrl || !win->ctrl->HasPageLabels();
     bool hasChapters = ShowChapterUi(win->ctrl);
@@ -3036,7 +3043,7 @@ void ReloadDocument(MainWindow* win, bool autoRefresh, bool canAskForPassword) {
     // we postpone the reload until the next autorefresh event
     if (!ctrl && autoRefresh) {
         SetFrameTitleForTab(tab, true);
-        HwndSetText(win->hwndFrame, tab->frameTitle);
+        SetNativeFrameTitle(win, tab->frameTitle);
         DeleteFileState(fs);
         return;
     }
@@ -4004,7 +4011,7 @@ static void ShowLoadErrorInTab(MainWindow* win, LoadArgs* args, Str path) {
         // the title bar names the file that failed, like it did before the tab
         // went away
         SetFrameTitleForTab(tab, false);
-        HwndSetText(win->hwndFrame, tab->frameTitle);
+        SetNativeFrameTitle(win, tab->frameTitle);
         HwndInvalidate(win->hwndCanvas);
     }
     LoadDocumentMarkNotExist(win, path, args->noSavePrefs, args->showWin);
@@ -5590,7 +5597,7 @@ static void CloseDocumentInCurrentTab(MainWindow* win, bool keepUIEnabled, bool 
         }
         HideCanvasScrollbars(win);
         win->RedrawAllIncludingNonClient();
-        HwndSetText(win->hwndFrame, Str(kSumatraWindowTitle));
+        SetNativeFrameTitle(win, Str(kSumatraWindowTitle));
         ReportIf(win->TabCount() != 0 || win->CurrentTab());
     }
 
@@ -6809,7 +6816,7 @@ static void RenameCurrentFile(MainWindow* win) {
         WindowTab* tab = win->CurrentTab();
         TabsOnChangedDoc(win);
         SetFrameTitleForTab(tab, false);
-        HwndSetText(win->hwndFrame, tab->frameTitle);
+        SetNativeFrameTitle(win, tab->frameTitle);
         if (win->tabsCtrl && win->tabsCtrl->hwnd) {
             HwndRepaintNow(win->tabsCtrl->hwnd);
         }
