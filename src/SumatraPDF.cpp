@@ -13169,7 +13169,7 @@ static LRESULT FrameOnCommand(MainWindow* win, HWND hwnd, UINT msg, WPARAM wp, L
             break;
 
         case CmdSendByEmail:
-            SendAsEmailAttachment(tab, win->hwndFrame);
+            SendAsEmailAttachment(tab);
             break;
 
         case CmdProperties: {
@@ -18540,7 +18540,7 @@ int APIENTRY WinMain(_In_ HINSTANCE /*hInstance*/, _In_opt_ HINSTANCE /*hPrevIns
     if (flags.updateSelfTo) {
         logf(" flags.updateSelfTo: '%s'\n", flags.updateSelfTo);
         RedirectIOToExistingConsole();
-        UpdateSelfTo(flags.updateSelfTo);
+        UpdateSelfTo(flags.updateSelfTo, flags.sleepMs);
         if (flags.exitWhenDone) {
             fastExit = !gIsDebugBuild;
             goto Exit;

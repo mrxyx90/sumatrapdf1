@@ -156,19 +156,10 @@
     <ClInclude Include="..\src\DocumentProperties.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\EngineMupdf.h">
-      <Filter>src</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\ExplorerQuickLook.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\ExternalViewers.h">
-      <Filter>src</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\Favorites.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\FileThumbnails.h">
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="..\src\FilterHighlightDraw.h">
@@ -315,12 +306,6 @@
     <ClInclude Include="..\src\Toolbar.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\UpdateCheck.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\Version.h">
-      <Filter>src</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\WindowTab.h">
       <Filter>src</Filter>
     </ClInclude>
@@ -441,13 +426,22 @@
     <ClInclude Include="..\src\shared\EngineBase.h">
       <Filter>src\shared</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\shared\EngineMupdf.h">
+      <Filter>src\shared</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\shared\EutlTrust.h">
       <Filter>src\shared</Filter>
     </ClInclude>
     <ClInclude Include="..\src\shared\ExifDump.h">
       <Filter>src\shared</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\shared\ExternalViewers.h">
+      <Filter>src\shared</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\shared\FileHistory.h">
+      <Filter>src\shared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\shared\FileThumbnails.h">
       <Filter>src\shared</Filter>
     </ClInclude>
     <ClInclude Include="..\src\shared\FilterUtil.h">
@@ -537,7 +531,13 @@
     <ClInclude Include="..\src\shared\Translations.h">
       <Filter>src\shared</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\shared\UpdateCheck.h">
+      <Filter>src\shared</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\shared\UpdateTemp.h">
+      <Filter>src\shared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\shared\Version.h">
       <Filter>src\shared</Filter>
     </ClInclude>
     <ClInclude Include="..\src\shared\WebpReader.h">
