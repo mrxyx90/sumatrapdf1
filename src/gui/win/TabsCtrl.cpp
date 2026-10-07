@@ -13,6 +13,7 @@
 #include "gui/Gfx.h"
 #include "gui/GuiColors.h"
 #include "gui/VirtCtrl.h"
+#include "Theme.h"
 #include "gui/win/TabsCtrl.h"
 
 // Forward declaration - defined in MainWindow.cpp
@@ -206,7 +207,7 @@ void TabCtrl::SetBounds(Rect r) {
 // like Chrome: only the selected tab shows (and hit-tests) its ✕, so a click
 // on a non-selected tab always selects it and can't accidentally close it
 bool TabCtrl::CloseVisible() {
-    return ti->canClose && IsSelected();
+    return ti->canClose && (IsSelected() || IsUnderMouse());
 }
 
 void TabCtrl::Paint(VirtPaintCtx& ctx) {
@@ -221,7 +222,20 @@ void TabCtrl::Paint(VirtPaintCtx& ctx) {
         textColor = IsLightColor(tabBgCol) ? MkRgb(0xC4, 0x1E, 0x1E) : MkRgb(0xFF, 0x6A, 0x6A);
     }
 
-    gfx->FillRect(r, tabBgCol);
+    if (IsSelected()) {
+        int radius = DpiScale(10);
+        gfx->FillRoundedRect(r, radius, tabBgCol);
+        gfx->FillRect({r.x, r.y + r.dy / 2, r.dx, r.dy - r.dy / 2}, tabBgCol);
+    } else {
+        gfx->FillRect(r, tabBgCol);
+    }
+
+    if (!IsSelected() && tabsCtrl) {
+        int idx = Idx();
+        if (idx + 1 != tabsCtrl->GetSelected()) {
+            gfx->FillRect({r.x + r.dx - 1, r.y + DpiScale(4), 1, r.dy - DpiScale(8)}, ThemeEdgeColor());
+        }
+    }
 
     bool isRtl = IsTabsRtl(hwnd);
     PlatformFont* font = tabsCtrl->GetFont();
@@ -992,6 +1006,9 @@ LRESULT TabsCtrl::WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         }
 
         case WM_ERASEBKGND:
+            if (needsInitialBackground) {
+                HdcFillRect((HDC)wp, HwndClientRect(hwnd), GetColor(kColTabInactiveBg));
+            }
             return 1;
 
         case WM_PAINT: {
@@ -1012,7 +1029,7 @@ LRESULT TabsCtrl::WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
                 return 0;
             }
             HDC hdc = GetDC(hwnd);
-            Color bgCol = GetColor(kColTabBg);
+            Color bgCol = GetColor(kColTabInactiveBg);
             if (vroot) {
                 PaintVirtTree(vroot, hdc, clientRc, bgCol);
             } else {
@@ -1020,6 +1037,7 @@ LRESULT TabsCtrl::WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
                 HdcFillRect(hdc, clientRc, bgCol);
             }
             ReleaseDC(hwnd, hdc);
+            needsInitialBackground = false;
             return 0;
         }
 
@@ -1147,12 +1165,13 @@ UINT_PTR TabsCtrl::RemoveTab(int idx) {
         } else if (idx == selectedTab) {
             selectedTab = 0;
         }
-        SetSelected(selectedTab);
     } else {
-        selectedIdx = -1;
+        selectedTab = -1;
     }
     LayoutTabs();
+    SetSelected(selectedTab);
     TabsCtrlUpdateAfterChangingTabsCount(this);
+    HwndRepaintNow(hwnd);
     return userData;
 }
 
@@ -1200,10 +1219,10 @@ int TabsCtrl::GetSelected() {
 
 int TabsCtrl::SetSelected(int idx) {
     int nTabs = TabCount();
-    if (idx < 0 || idx >= nTabs) {
+    if (idx != -1 && (idx < 0 || idx >= nTabs)) {
         logf("TabsCtrl::SetSelected(): idx: %d, TabsCount(): %d\n", idx, nTabs);
     }
-    ReportIf(idx < 0 || idx >= nTabs);
+    ReportIf(idx != -1 && (idx < 0 || idx >= nTabs));
     int prevSelectedIdx = selectedIdx;
     selectedIdx = idx;
     UpdateHover(tabHighlighted);

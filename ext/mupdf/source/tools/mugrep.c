@@ -45,7 +45,7 @@ static const char *mark_close = "";
 static int mugrep_usage(void)
 {
 	fprintf(stderr,
-		"usage: SumatraPDF grep [options] pattern input.pdf [ input2.pdf ... ]\n"
+		"usage: mugrep [options] pattern input.pdf [ input2.pdf ... ]\n"
 		"\t-p -\tpassword for encrypted PDF files\n"
 		"\t-F\tpattern is a fixed string\n"
 		"\t-a\tignore accents (diacritics)\n"

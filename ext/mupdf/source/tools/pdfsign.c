@@ -44,7 +44,7 @@ static int list = 1;
 static int usage(void)
 {
 	fprintf(stderr,
-		"Usage: SumatraPDF sign [options] input.pdf [signature object numbers]\n"
+		"usage: mutool sign [options] input.pdf [signature object numbers]\n"
 		"\t-p -\tpassword\n"
 		"\t-v \tverify signature\n"
 		"\t-c \tclear signatures\n"

@@ -8,3 +8,4 @@ HWND CommandPaletteHwndForAccelerator(HWND hwnd);
 TempStr CommandPaletteStateTemp(int* exitCodeOut);
 void CommandPaletteOnAnnotationsChanged();
 void CommandPaletteUpdateTheme();
+bool IsCommandPaletteOpen(MainWindow* win = nullptr);

@@ -1417,6 +1417,7 @@
     <ClInclude Include="..\src\FindBar.h" />
     <ClInclude Include="..\src\FindWindow.h" />
     <ClInclude Include="..\src\Flags.h" />
+    <ClInclude Include="..\src\FloatingToolbar.h" />
     <ClInclude Include="..\src\FormFields.h" />
     <ClInclude Include="..\src\HomePage.h" />
     <ClInclude Include="..\src\ImageSaveCropResize.h" />
@@ -1443,6 +1444,7 @@
     <ClInclude Include="..\src\Screenshot.h" />
     <ClInclude Include="..\src\ScreenshotCapture.h" />
     <ClInclude Include="..\src\SearchAndDDE.h" />
+    <ClInclude Include="..\src\SearchPanel.h" />
     <ClInclude Include="..\src\SelectTextKeyboard.h" />
     <ClInclude Include="..\src\Selection.h" />
     <ClInclude Include="..\src\SelectionToolbar.h" />
@@ -1639,6 +1641,7 @@
     <ClCompile Include="..\src\FindBar.cpp" />
     <ClCompile Include="..\src\FindWindow.cpp" />
     <ClCompile Include="..\src\Flags.cpp" />
+    <ClCompile Include="..\src\FloatingToolbar.cpp" />
     <ClCompile Include="..\src\FormFields.cpp" />
     <ClCompile Include="..\src\GetPasswordDialog.cpp" />
     <ClCompile Include="..\src\GlobalHotkeys.cpp" />
@@ -1682,6 +1685,7 @@
     <ClCompile Include="..\src\Screenshot.cpp" />
     <ClCompile Include="..\src\ScreenshotCapture.cpp" />
     <ClCompile Include="..\src\SearchAndDDE.cpp" />
+    <ClCompile Include="..\src\SearchPanel.cpp" />
     <ClCompile Include="..\src\SelectTextKeyboard.cpp" />
     <ClCompile Include="..\src\Selection.cpp" />
     <ClCompile Include="..\src\SelectionHandlers.cpp" />

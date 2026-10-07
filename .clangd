@@ -217,6 +217,8 @@ CompileFlags:
     - -include
     - AIChatPanel.h
     - -include
+    - SearchPanel.h
+    - -include
     - Annotation.h
     - -include
     - AppSettings.h

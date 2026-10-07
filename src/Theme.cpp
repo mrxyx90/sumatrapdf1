@@ -21,6 +21,7 @@ License: GPLv3 */
 #include "base/Win.h"
 
 #include "Theme.h"
+#include "FloatingToolbar.h"
 
 // The installer and uninstaller never load settings, so CreateThemeCommands()
 // doesn't run and there is no current theme - every Theme*Color() accessor
@@ -135,7 +136,7 @@ static Str themesTxt = StrL(R"(Themes [
     [
         Name = Charcoal
         TextColor = #ffffff
-        BackgroundColor = #2d2d30
+        BackgroundColor = #202020
         ControlBackgroundColor = #2d2d30
         ActiveTabBackgroundColor = #2d2d30
         InactiveTabBackgroundColor = #45454a
@@ -501,6 +502,7 @@ static void UpdateGuiColorsFromTheme();
 int gFirstSetThemeCmdId;
 int gLastSetThemeCmdId;
 int gCurrSetThemeCmdId;
+int gSysSetThemeCmdId = 0;
 
 static Vec<Theme*>* gThemes = nullptr;
 static int gThemeCount;
@@ -558,6 +560,11 @@ void FreeThemes() {
     gParsedThemes = nullptr;
 }
 
+// when true, the user picked "System" as the theme: we resolve it to the
+// preferred light/dark theme from the OS setting and re-resolve when Windows
+// switches modes; gSettings->theme stays "System"
+static bool gThemeFollowsSystem = false;
+
 void CreateThemeCommands() {
     FreeThemes();
     DetectHighContrastMode();
@@ -581,24 +588,27 @@ void CreateThemeCommands() {
     RecalcUseHighContrast();
 
     CustomCommand* cmd;
+    auto* sysArgs = NewStringArg(kCmdArgTheme, StrL("System"));
+    cmd = CreateCustomCommand(StrL("System"), CmdSetTheme, sysArgs, Tr("Set theme 'System'"));
+    gSysSetThemeCmdId = cmd->id;
+    gFirstSetThemeCmdId = cmd->id;
+
     for (int i = 0; i < gThemeCount; i++) {
         Theme* theme = (*gThemes)[i];
         Str themeName = theme->name;
         auto* args = NewStringArg(kCmdArgTheme, themeName);
         cmd = CreateCustomCommand(themeName, CmdSetTheme, args, fmt(Tr("Set theme '%s'").s, themeName));
-        if (i == 0) {
-            gFirstSetThemeCmdId = cmd->id;
-        } else if (i == gThemeCount - 1) {
+        if (i == gThemeCount - 1) {
             gLastSetThemeCmdId = cmd->id;
         }
     }
-    gCurrSetThemeCmdId = gFirstSetThemeCmdId + gCurrThemeIndex;
-}
 
-// when true, the user picked "System" as the theme: we resolve it to the
-// preferred light/dark theme from the OS setting and re-resolve when Windows
-// switches modes; gSettings->theme stays "System"
-static bool gThemeFollowsSystem = false;
+    if (gThemeFollowsSystem) {
+        gCurrSetThemeCmdId = gSysSetThemeCmdId;
+    } else {
+        gCurrSetThemeCmdId = gFirstSetThemeCmdId + 1 + gCurrThemeIndex;
+    }
+}
 
 // remember the last explicitly used light and dark theme so the light/dark
 // toggle and the System theme know what to switch to
@@ -641,7 +651,7 @@ void SetThemeByIndex(int themeIdx) {
     gThemeFollowsSystem = false;
     bool themeChanged = (gCurrThemeIndex != themeIdx);
     gCurrThemeIndex = themeIdx;
-    gCurrSetThemeCmdId = gFirstSetThemeCmdId + themeIdx;
+    gCurrSetThemeCmdId = gFirstSetThemeCmdId + 1 + themeIdx;
     gCurrentTheme = (*gThemes)[gCurrThemeIndex];
     RecalcUseHighContrast(); // it depends on which theme is current
     str::ReplaceWithCopy(&gSettings->theme, gCurrentTheme->name);
@@ -651,6 +661,10 @@ void SetThemeByIndex(int themeIdx) {
     // different colors (the System theme, high contrast, a settings edit)
     UpdateGuiColorsFromTheme();
     if (themeChanged) {
+        // Rebuild the floating toolbar immediately after the new theme colors
+        // are installed, so its background and SVG icons change in the same
+        // theme-switch operation rather than waiting for another repaint.
+        FloatingToolbarUpdateTheme();
         UpdateAfterThemeChange();
     }
     DarkModeRememberTreeViewStyle();
@@ -745,17 +759,20 @@ static int GetPreferredDarkThemeIndex() {
     if (idx >= 0) {
         return idx;
     }
-    idx = GetThemeByName(StrL("Dark"));
+    idx = GetThemeByName(StrL("Charcoal"));
     return idx >= 0 ? idx : 0;
 }
 
 void SetTheme(Str name) {
-    if (str::EqI(name, StrL("System"))) {
+    if (str::IsEmptyOrWhiteSpace(name) || str::EqI(name, StrL("System"))) {
         // resolve to the preferred light/dark theme from the OS setting; keep
         // "System" in prefs so it persists and keeps following the OS
         int idx = OsAppsUseDarkMode() ? GetPreferredDarkThemeIndex() : GetPreferredLightThemeIndex();
         SetThemeByIndex(idx);
         gThemeFollowsSystem = true;
+        if (gSysSetThemeCmdId != 0) {
+            gCurrSetThemeCmdId = gSysSetThemeCmdId;
+        }
         str::ReplaceWithCopy(&gSettings->theme, StrL("System"));
         return;
     }
@@ -851,8 +868,8 @@ static void UpdateGuiColorsFromTheme() {
     gColsRichText[kColRichBg] = ctlBg;
 
     gColsTab[kColTabText] = text;
-    gColsTab[kColTabBg] = ThemeActiveTabBackgroundColor();
-    gColsTab[kColTabInactiveBg] = ThemeInactiveTabBackgroundColor();
+    gColsTab[kColTabBg] = ThemeInactiveTabBackgroundColor();
+    gColsTab[kColTabInactiveBg] = ThemeActiveTabBackgroundColor();
 
     // custom top-level windows (dialogs, popups) sit their content on ctlBg,
     // like the side panels; a window that wants something else (the toolbar's
@@ -872,6 +889,7 @@ static void UpdateGuiColorsFromTheme() {
 // into gui/'s defaults, then rebuild and repaint everything that shows them.
 void SumatraUpdateTheme() {
     UpdateGuiColorsFromTheme();
+    FloatingToolbarUpdateTheme();
     UpdateAfterThemeChange();
 }
 

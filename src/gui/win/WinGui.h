@@ -705,6 +705,8 @@ void EditSetFocus(Edit*);
 struct Edit : ControlBase {
     struct CreateArgs {
         HWND parent = nullptr;
+        // Some controls are revealed after positioning and theme colors are set.
+        bool isVisible = true;
         bool isMultiLine = false;
         // multi-line: ES_AUTOHSCROLL so long lines scroll instead of wrapping
         bool noWrap = false;

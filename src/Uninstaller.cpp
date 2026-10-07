@@ -103,21 +103,22 @@ static void RemoveInstallDirFromPath(bool allUsers, Str installDir) {
 }
 
 static void RemoveInstalledFiles() {
-    // can't use GetExistingInstallationDir() anymore because we
-    // delete registry entries
     Str dir = gCli->installer.installDir;
     if (len(dir) == 0) {
         log(StrL("RemoveInstalledFiles(): dir is empty\n"));
+        return;
     }
-#if 0
-    for (const char* s : gInstalledFiles) {
-        TempStr path = path::JoinTemp(dir, s);
-        bool ok = file::Delete(path);
-        if (ok) {
-            logf("RemoveInstalledFiles(): removed '%s'\n", path);
+    static const Str kFiles[] = {
+        StrL("Apdf.exe"), StrL("SumatraPDF.exe"), StrL("libsumatrapdf.dll"),
+        StrL("PdfFilter.dll"), StrL("PdfPreview.dll"), StrL("libmupdf.dll"),
+        StrL("uninstall.exe"), StrL("Apdf-Uninstaller.exe"), StrL("Sumatra-Uninstaller.exe")
+    };
+    for (Str f : kFiles) {
+        TempStr p = path::JoinTemp(dir, f);
+        if (file::Exists(p)) {
+            file::Delete(p);
         }
     }
-#endif
     bool ok = dir::RemoveAll(dir);
     logf("RemoveInstalledFiles(): removed dir '%s', ok = %d\n", dir, (int)ok);
 }
@@ -480,8 +481,14 @@ static void RelaunchMaybeElevatedFromTempDirectory(Flags* cli) {
         log(StrL("  already running from temp dir\n"));
         return;
     }
+    file::Delete(installerTempPath);
     logf("  copying installer '%s' to '%s'\n", ownPath, installerTempPath);
     bool ok = file::Copy(installerTempPath, ownPath, false);
+    if (!ok) {
+        Sleep(100);
+        file::Delete(installerTempPath);
+        ok = file::Copy(installerTempPath, ownPath, false);
+    }
     if (!ok) {
         logf("  failed to copy installer\n");
         return;
@@ -573,7 +580,7 @@ int RunUninstaller() {
     if (!installerExists) {
         log(StrL("Uninstaller executable doesn't exist\n"));
         auto caption = Tr("Uninstallation failed");
-        auto msg = Tr("SumatraPDF installation not found.");
+        auto msg = fmt(Tr("%s installation not found.").s, StrL(kAppName));
         MsgBox(nullptr, msg, caption, MB_ICONEXCLAMATION | MB_OK);
         goto Exit;
     }

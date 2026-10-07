@@ -127,7 +127,7 @@ static void RegisterWndClass(WStr className) {
     wc.lpszClassName = className.s;
     wc.lpfnWndProc = WndBaseWindowProc;
     wc.hCursor = GetCachedCursor(IDC_ARROW);
-    wc.hbrBackground = reinterpret_cast<HBRUSH>(::GetStockObject(WHITE_BRUSH));
+    wc.hbrBackground = nullptr;
     ::RegisterClassExW(&wc);
 }
 

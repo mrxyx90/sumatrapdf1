@@ -48,6 +48,8 @@ struct VirtHost {
         WStr className;
         Size initialSize;
         Color bgColor = kColorUnset;
+        // Fill with bgColor on erase until the first visible WM_PAINT.
+        bool fillBackgroundBeforeFirstVisiblePaint = false;
         bool isRtl = false;
         bool visible = true;
         // clicking the host doesn't move the keyboard focus, so the frame keeps
@@ -72,6 +74,7 @@ struct VirtHost {
     bool noActivate = false;
     bool isPopup = false;
     void* userData = nullptr;
+    bool fillBackgroundBeforeFirstVisiblePaint = false;
 
     // fills the background; the host fills it with bgColor when this is not set
     Func1<VirtHostPaintEvent*> onPaintBackground;

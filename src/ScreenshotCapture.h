@@ -19,3 +19,5 @@ struct ScreenshotHost {
 extern ScreenshotHost gScreenshotHost;
 
 void TakeScreenshots(HWND hwndRestore = nullptr);
+// Capture only the supplied document/canvas window and open it in the image editor.
+TempStr TakeScreenshotOfWindow(HWND hwnd);
