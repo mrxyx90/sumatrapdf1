@@ -1402,19 +1402,13 @@
     <ClInclude Include="..\src\AnnotFilterToolbar.h" />
     <ClInclude Include="..\src\AnnotPlacement.h" />
     <ClInclude Include="..\src\AnnotTextPopup.h" />
-    <ClInclude Include="..\src\AppSettings.h" />
-    <ClInclude Include="..\src\AppTools.h" />
     <ClInclude Include="..\src\Canvas.h" />
     <ClInclude Include="..\src\ChmModel.h" />
     <ClInclude Include="..\src\CommandAvailability.h" />
     <ClInclude Include="..\src\CommandPalette.h" />
     <ClInclude Include="..\src\DarkMode.h" />
-    <ClInclude Include="..\src\DisplayModel.h" />
-    <ClInclude Include="..\src\DocController.h" />
     <ClInclude Include="..\src\DocumentProperties.h" />
-    <ClInclude Include="..\src\EngineAll.h" />
     <ClInclude Include="..\src\EngineMupdf.h" />
-    <ClInclude Include="..\src\ExifDump.h" />
     <ClInclude Include="..\src\ExplorerQuickLook.h" />
     <ClInclude Include="..\src\ExternalViewers.h" />
     <ClInclude Include="..\src\Favorites.h" />
@@ -1425,9 +1419,7 @@
     <ClInclude Include="..\src\Flags.h" />
     <ClInclude Include="..\src\FloatingToolbar.h" />
     <ClInclude Include="..\src\FormFields.h" />
-    <ClInclude Include="..\src\GlobalHotkeys.h" />
     <ClInclude Include="..\src\HomePage.h" />
-    <ClInclude Include="..\src\ImageReader.h" />
     <ClInclude Include="..\src\ImageSaveCropResize.h" />
     <ClInclude Include="..\src\Installer.h" />
     <ClInclude Include="..\src\KeyboardHelp.h" />
@@ -1442,7 +1434,6 @@
     <ClInclude Include="..\src\PageThumbnails.h" />
     <ClInclude Include="..\src\PdfTools.h" />
     <ClInclude Include="..\src\PngOptimizer.h" />
-    <ClInclude Include="..\src\Print.h" />
     <ClInclude Include="..\src\ReadAloud.h" />
     <ClInclude Include="..\src\ReadingAutoScroll.h" />
     <ClInclude Include="..\src\ReadingBar.h" />
@@ -1464,14 +1455,11 @@
     <ClInclude Include="..\src\SimpleBrowserWindow.h" />
     <ClInclude Include="..\src\StressTesting.h" />
     <ClInclude Include="..\src\SumatraDialogs.h" />
-    <ClInclude Include="..\src\SumatraLog.h" />
     <ClInclude Include="..\src\SumatraPDF.h" />
     <ClInclude Include="..\src\SumatraTest.h" />
-    <ClInclude Include="..\src\SvgIcons.h" />
     <ClInclude Include="..\src\TabGroupsManage.h" />
     <ClInclude Include="..\src\TableOfContents.h" />
     <ClInclude Include="..\src\Tabs.h" />
-    <ClInclude Include="..\src\Theme.h" />
     <ClInclude Include="..\src\Toolbar.h" />
     <ClInclude Include="..\src\UpdateCheck.h" />
     <ClInclude Include="..\src\Version.h" />
@@ -1496,6 +1484,8 @@
     <ClInclude Include="..\src\resource.h" />
     <ClInclude Include="..\src\shared\AnnotSearch.h" />
     <ClInclude Include="..\src\shared\Annotation.h" />
+    <ClInclude Include="..\src\shared\AppSettings.h" />
+    <ClInclude Include="..\src\shared\AppTools.h" />
     <ClInclude Include="..\src\shared\AvifReader.h" />
     <ClInclude Include="..\src\shared\BuildConfig.h" />
     <ClInclude Include="..\src\shared\CachedObjects.h" />
@@ -1504,19 +1494,25 @@
     <ClInclude Include="..\src\shared\ChmFile.h" />
     <ClInclude Include="..\src\shared\Commands.h" />
     <ClInclude Include="..\src\shared\DisplayMode.h" />
+    <ClInclude Include="..\src\shared\DisplayModel.h" />
+    <ClInclude Include="..\src\shared\DocController.h" />
     <ClInclude Include="..\src\shared\DocProperties.h" />
     <ClInclude Include="..\src\shared\DocumentLayout.h" />
     <ClInclude Include="..\src\shared\EbookDoc.h" />
     <ClInclude Include="..\src\shared\EbookFormatter.h" />
     <ClInclude Include="..\src\shared\EmbeddedResources.h" />
+    <ClInclude Include="..\src\shared\EngineAll.h" />
     <ClInclude Include="..\src\shared\EngineBase.h" />
     <ClInclude Include="..\src\shared\EutlTrust.h" />
+    <ClInclude Include="..\src\shared\ExifDump.h" />
     <ClInclude Include="..\src\shared\FileHistory.h" />
     <ClInclude Include="..\src\shared\FilterUtil.h" />
+    <ClInclude Include="..\src\shared\GlobalHotkeys.h" />
     <ClInclude Include="..\src\shared\GoogleLens.h" />
     <ClInclude Include="..\src\shared\GumboHtmlParser.h" />
     <ClInclude Include="..\src\shared\HangDetector.h" />
     <ClInclude Include="..\src\shared\HtmlFormatter.h" />
+    <ClInclude Include="..\src\shared\ImageReader.h" />
     <ClInclude Include="..\src\shared\JxlReader.h" />
     <ClInclude Include="..\src\shared\LitDoc.h" />
     <ClInclude Include="..\src\shared\MarkdownToc.h" />
@@ -1528,12 +1524,16 @@
     <ClInclude Include="..\src\shared\PdfDarkMode.h" />
     <ClInclude Include="..\src\shared\PdfDate.h" />
     <ClInclude Include="..\src\shared\PdfSync.h" />
+    <ClInclude Include="..\src\shared\Print.h" />
     <ClInclude Include="..\src\shared\PrintWin11.h" />
     <ClInclude Include="..\src\shared\ProgressUpdateUI.h" />
     <ClInclude Include="..\src\shared\SelectionHandlers.h" />
     <ClInclude Include="..\src\shared\SumatraControl.h" />
+    <ClInclude Include="..\src\shared\SumatraLog.h" />
+    <ClInclude Include="..\src\shared\SvgIcons.h" />
     <ClInclude Include="..\src\shared\TextSearch.h" />
     <ClInclude Include="..\src\shared\TextSelection.h" />
+    <ClInclude Include="..\src\shared\Theme.h" />
     <ClInclude Include="..\src\shared\Translations.h" />
     <ClInclude Include="..\src\shared\UpdateTemp.h" />
     <ClInclude Include="..\src\shared\WebpReader.h" />
@@ -2215,6 +2215,20 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Profile|ARM64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Profile x64_asan|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="..\src\shared\tests\CommandPalette_ut.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release x64_asan|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='ReleaseAnalyze|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='ReleaseAnalyze|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='ReleaseAnalyze|ARM64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='ReleaseAnalyze x64_asan|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Profile|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Profile|ARM64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Profile x64_asan|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="..\src\shared\tests\EngineDjvuDec_ut.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
@@ -2370,20 +2384,6 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Profile x64_asan|x64'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="..\src\testcode\TestTab.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release x64_asan|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='ReleaseAnalyze|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='ReleaseAnalyze|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='ReleaseAnalyze|ARM64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='ReleaseAnalyze x64_asan|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Profile|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Profile|ARM64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Profile x64_asan|x64'">true</ExcludedFromBuild>
-    </ClCompile>
-    <ClCompile Include="..\src\tests\CommandPalette_ut.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">true</ExcludedFromBuild>

@@ -18,11 +18,8 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\src\EngineAll.h" />
     <ClInclude Include="..\src\EngineMupdf.h" />
-    <ClInclude Include="..\src\ImageReader.h" />
     <ClInclude Include="..\src\RegistryPreview.h" />
-    <ClInclude Include="..\src\SumatraLog.h" />
     <ClInclude Include="..\src\base\Archive.h">
       <Filter>base</Filter>
     </ClInclude>
@@ -56,6 +53,9 @@
     <ClInclude Include="..\src\shared\EmbeddedResources.h">
       <Filter>shared</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\shared\EngineAll.h">
+      <Filter>shared</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\shared\EngineBase.h">
       <Filter>shared</Filter>
     </ClInclude>
@@ -63,6 +63,9 @@
       <Filter>shared</Filter>
     </ClInclude>
     <ClInclude Include="..\src\shared\HtmlFormatter.h">
+      <Filter>shared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\shared\ImageReader.h">
       <Filter>shared</Filter>
     </ClInclude>
     <ClInclude Include="..\src\shared\JxlReader.h">
@@ -84,6 +87,9 @@
       <Filter>shared</Filter>
     </ClInclude>
     <ClInclude Include="..\src\shared\SumatraConfig.h">
+      <Filter>shared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\shared\SumatraLog.h">
       <Filter>shared</Filter>
     </ClInclude>
     <ClInclude Include="..\src\shared\WebpReader.h">

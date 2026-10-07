@@ -138,12 +138,6 @@
     <ClInclude Include="..\src\AnnotTextPopup.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\AppSettings.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\AppTools.h">
-      <Filter>src</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\Canvas.h">
       <Filter>src</Filter>
     </ClInclude>
@@ -159,22 +153,10 @@
     <ClInclude Include="..\src\DarkMode.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\DisplayModel.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\DocController.h">
-      <Filter>src</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\DocumentProperties.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\EngineAll.h">
-      <Filter>src</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\EngineMupdf.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\ExifDump.h">
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="..\src\ExplorerQuickLook.h">
@@ -207,13 +189,7 @@
     <ClInclude Include="..\src\FormFields.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\GlobalHotkeys.h">
-      <Filter>src</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\HomePage.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\ImageReader.h">
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="..\src\ImageSaveCropResize.h">
@@ -256,9 +232,6 @@
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="..\src\PngOptimizer.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\Print.h">
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="..\src\ReadAloud.h">
@@ -324,16 +297,10 @@
     <ClInclude Include="..\src\SumatraDialogs.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\SumatraLog.h">
-      <Filter>src</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\SumatraPDF.h">
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="..\src\SumatraTest.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\SvgIcons.h">
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="..\src\TabGroupsManage.h">
@@ -343,9 +310,6 @@
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="..\src\Tabs.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\Theme.h">
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="..\src\Toolbar.h">
@@ -420,6 +384,12 @@
     <ClInclude Include="..\src\shared\Annotation.h">
       <Filter>src\shared</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\shared\AppSettings.h">
+      <Filter>src\shared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\shared\AppTools.h">
+      <Filter>src\shared</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\shared\AvifReader.h">
       <Filter>src\shared</Filter>
     </ClInclude>
@@ -444,6 +414,12 @@
     <ClInclude Include="..\src\shared\DisplayMode.h">
       <Filter>src\shared</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\shared\DisplayModel.h">
+      <Filter>src\shared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\shared\DocController.h">
+      <Filter>src\shared</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\shared\DocProperties.h">
       <Filter>src\shared</Filter>
     </ClInclude>
@@ -459,16 +435,25 @@
     <ClInclude Include="..\src\shared\EmbeddedResources.h">
       <Filter>src\shared</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\shared\EngineAll.h">
+      <Filter>src\shared</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\shared\EngineBase.h">
       <Filter>src\shared</Filter>
     </ClInclude>
     <ClInclude Include="..\src\shared\EutlTrust.h">
       <Filter>src\shared</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\shared\ExifDump.h">
+      <Filter>src\shared</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\shared\FileHistory.h">
       <Filter>src\shared</Filter>
     </ClInclude>
     <ClInclude Include="..\src\shared\FilterUtil.h">
+      <Filter>src\shared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\shared\GlobalHotkeys.h">
       <Filter>src\shared</Filter>
     </ClInclude>
     <ClInclude Include="..\src\shared\GoogleLens.h">
@@ -481,6 +466,9 @@
       <Filter>src\shared</Filter>
     </ClInclude>
     <ClInclude Include="..\src\shared\HtmlFormatter.h">
+      <Filter>src\shared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\shared\ImageReader.h">
       <Filter>src\shared</Filter>
     </ClInclude>
     <ClInclude Include="..\src\shared\JxlReader.h">
@@ -516,6 +504,9 @@
     <ClInclude Include="..\src\shared\PdfSync.h">
       <Filter>src\shared</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\shared\Print.h">
+      <Filter>src\shared</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\shared\PrintWin11.h">
       <Filter>src\shared</Filter>
     </ClInclude>
@@ -528,10 +519,19 @@
     <ClInclude Include="..\src\shared\SumatraControl.h">
       <Filter>src\shared</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\shared\SumatraLog.h">
+      <Filter>src\shared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\shared\SvgIcons.h">
+      <Filter>src\shared</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\shared\TextSearch.h">
       <Filter>src\shared</Filter>
     </ClInclude>
     <ClInclude Include="..\src\shared\TextSelection.h">
+      <Filter>src\shared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\shared\Theme.h">
       <Filter>src\shared</Filter>
     </ClInclude>
     <ClInclude Include="..\src\shared\Translations.h">
@@ -1277,6 +1277,9 @@
     <ClCompile Include="..\src\shared\tests\ChapterTable_ut.cpp">
       <Filter>src\shared\tests</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\shared\tests\CommandPalette_ut.cpp">
+      <Filter>src\shared\tests</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\shared\tests\EngineDjvuDec_ut.cpp">
       <Filter>src\shared\tests</Filter>
     </ClCompile>
@@ -1312,9 +1315,6 @@
     </ClCompile>
     <ClCompile Include="..\src\testcode\TestTab.cpp">
       <Filter>src\testcode</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\tests\CommandPalette_ut.cpp">
-      <Filter>src\tests</Filter>
     </ClCompile>
     <ClCompile Include="..\src\tests\ShortcutParse_ut.cpp">
       <Filter>src\tests</Filter>

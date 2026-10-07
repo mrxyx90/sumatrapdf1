@@ -2371,7 +2371,7 @@ void CommandPaletteWnd::FilterStringsForQuery(Str filter, StrVecCP& strings) {
         filter = StrL("");
     }
 
-    PaletteMode mode = PaletteModeFromQuery(filter, &filter);
+    PaletteMode mode = ParsePaletteMode(filter);
     if (mode == PaletteMode::Thumbnails) {
         return;
     }

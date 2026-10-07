@@ -1260,10 +1260,8 @@
     </CustomBuild>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="..\src\EngineAll.h" />
     <ClInclude Include="..\src\EngineMupdf.h" />
     <ClInclude Include="..\src\RegistrySearchFilter.h" />
-    <ClInclude Include="..\src\SumatraLog.h" />
     <ClInclude Include="..\src\base\Archive.h" />
     <ClInclude Include="..\src\ifilter\EpubFilter.h" />
     <ClInclude Include="..\src\ifilter\FilterBase.h" />
@@ -1273,12 +1271,14 @@
     <ClInclude Include="..\src\shared\DocProperties.h" />
     <ClInclude Include="..\src\shared\EbookDoc.h" />
     <ClInclude Include="..\src\shared\EmbeddedResources.h" />
+    <ClInclude Include="..\src\shared\EngineAll.h" />
     <ClInclude Include="..\src\shared\EngineBase.h" />
     <ClInclude Include="..\src\shared\GumboHtmlParser.h" />
     <ClInclude Include="..\src\shared\MobiDoc.h" />
     <ClInclude Include="..\src\shared\PalmDbReader.h" />
     <ClInclude Include="..\src\shared\PdfCad.h" />
     <ClInclude Include="..\src\shared\PdfDarkMode.h" />
+    <ClInclude Include="..\src\shared\SumatraLog.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\EngineMupdf.cpp" />
