@@ -2490,7 +2490,6 @@ static void FinishPendingDocumentRelayout(MainWindow* win) {
 // isNewWindow : if true then 'win' refers to a newly created window that needs
 //   to be resized and placed
 static void SetTabLoadError(WindowTab* tab, Str path);
-static void PrepareStartupWindowRegion(MainWindow* win);
 static bool ResetMaximizedWindowRegion(HWND hwnd);
 
 // placeWindow : if true then the Window will be moved/sized according
@@ -2820,9 +2819,6 @@ static void ReplaceDocumentInCurrentTab(LoadArgs* args, DocController* ctrl, Fil
             HwndMoveWindow(win->hwndFrame, &rect);
         }
         if (args->showWin) {
-            if (showType == SW_MAXIMIZE && !showAsFullScreen && !HwndIsVisible(win->hwndFrame)) {
-                PrepareStartupWindowRegion(win);
-            }
             ShowWindow(win->hwndFrame, showType);
             if (IsRunningOnWine()) {
                 Rect wr = HwndWindowRect(win->hwndFrame);
@@ -3533,28 +3529,12 @@ static MainWindow* CreateMainWindow(bool restoringSession) {
     return win;
 }
 
-static void PrepareStartupWindowRegion(MainWindow* win) {
-    HWND hwnd = win->hwndFrame;
-    if (!win->tabsInTitlebar || HwndIsVisible(hwnd) || !IsZoomed(hwnd) || win->isFullScreen || win->presentation) {
-        return;
-    }
-
-    // Install the final clip before DWM sees the first visible surface.
-    win->hasStartupWindowRegion = ResetMaximizedWindowRegion(hwnd);
-}
-
 void ShowMainWindow(MainWindow* win, int windowState) {
     bool wasVisible = HwndIsVisible(win->hwndFrame);
 
     int dpi = RoundUp(DpiGetForHwnd(win->hwndFrame), 4);
     if (dpi > 0 && dpi != win->frameDpi) {
         OnDpiChanged(win, nullptr, dpi, true);
-    }
-
-    // Install the maximized startup region before changing the native frame.
-    // This prevents DWM from briefly presenting the default caption/frame.
-    if (!wasVisible && windowState == WIN_STATE_MAXIMIZED) {
-        PrepareStartupWindowRegion(win);
     }
 
     if (win->tabsInTitlebar) {
@@ -14215,21 +14195,6 @@ static bool ResetMaximizedWindowRegion(HWND hwnd) {
     return true;
 }
 
-static void UpdateStartupWindowRegion(MainWindow* win) {
-    HWND hwnd = win->hwndFrame;
-    if (!win->hasStartupWindowRegion || IsIconic(hwnd)) {
-        return;
-    }
-    // SetWindowRgn sends WINDOWPOS messages; guard against re-entry.
-    win->hasStartupWindowRegion = false;
-    if (!IsZoomed(hwnd) || !win->tabsInTitlebar || win->isFullScreen || win->presentation) {
-        win->hasStartupWindowRegion = SetWindowRgn(hwnd, nullptr, HwndIsVisible(hwnd)) == 0;
-        return;
-    }
-    ResetMaximizedWindowRegion(hwnd);
-    win->hasStartupWindowRegion = true;
-}
-
 static void ClearAllHighlights(MainWindow* win) {
     for (int i = CB_BTN_FIRST; i < CB_BTN_COUNT; i++) {
         if (win->captionBtn[i].highlighted || win->captionBtn[i].pressed) {
@@ -15264,13 +15229,6 @@ static void ApplyEmbeddedWindowChrome(MainWindow* win) {
 static LRESULT CALLBACK WndProcSumatraFrame(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     DpiScope dpiScope(hwnd);
     MainWindow* win = FindMainWindowByHwnd(hwnd);
-    if (win && msg == WM_WINDOWPOSCHANGED) {
-        auto* pos = (WINDOWPOS*)lp;
-        uint unchanged = SWP_NOMOVE | SWP_NOSIZE;
-        if ((pos->flags & unchanged) != unchanged || (pos->flags & SWP_FRAMECHANGED)) {
-            UpdateStartupWindowRegion(win);
-        }
-    }
     if (win && msg == WM_PAINT && HwndIsVisible(hwnd)) {
         win->needsInitialFrameBackground = false;
     }
