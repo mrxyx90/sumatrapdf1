@@ -3397,7 +3397,11 @@ static MainWindow* CreateMainWindow(bool restoringSession) {
 
     WStr clsName = WStr(kFrameClassName);
     WStr title = WStr(kSumatraWindowTitleW);
-    DWORD style = WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN;
+    // Tabs-in-titlebar windows paint their own caption. Do not create a native
+    // WS_CAPTION at all: even while the frame is hidden, DWM can briefly present
+    // that caption during the first ShowWindow, causing a one-frame titlebar flash.
+    DWORD style = (SettingsUseTabs() ? (WS_OVERLAPPEDWINDOW & ~WS_CAPTION) : WS_OVERLAPPEDWINDOW) |
+                  WS_CLIPCHILDREN;
     if (gSettings && gSettings->windowState == WIN_STATE_MAXIMIZED) {
         style |= WS_MAXIMIZE;
     }
