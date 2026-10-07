@@ -81,7 +81,7 @@ static const FieldInfo gFixedPageUIFields[] = {
     {offsetof(FixedPageUI, grayscale), SettingType::Bool, false},
     {offsetof(FixedPageUI, textColor), SettingType::Color, (intptr_t)"#000000"},
     {offsetof(FixedPageUI, backgroundColor), SettingType::Color, (intptr_t)"#ffffff"},
-    {offsetof(FixedPageUI, selectionColor), SettingType::Color, (intptr_t)"#ffff00"},
+    {offsetof(FixedPageUI, selectionColor), SettingType::Color, (intptr_t)"#cc0074ff"},
     {offsetof(FixedPageUI, windowMargin), SettingType::Compact, (intptr_t)&gWindowMarginInfo},
     {offsetof(FixedPageUI, pageSpacing), SettingType::Compact, (intptr_t)&gSizeInfo},
     {offsetof(FixedPageUI, gradientColors), SettingType::ColorArray, 0},
