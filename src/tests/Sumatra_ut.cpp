@@ -31,6 +31,8 @@
 #include "base/tests/UtAssert.h"
 
 // in src/base/tests/
+void ArchiveTest();
+void AppendStoreTest();
 void BaseUtilTest();
 void ByteOrderTests();
 void ClipboardImageTest();
@@ -39,6 +41,7 @@ void CssParser_UnitTests();
 void DictTest();
 void DirRemoveAllTest();
 void FileUtilTest();
+void UpdateTempFileTests();
 void GuessFileTypeTest();
 void JsonTest();
 void RefHoverTest();
@@ -58,8 +61,7 @@ void PagePosition_UnitTests();
 void PdfSync_UnitTests();
 void CachedObjects_UnitTests();
 void PageRenderPolicy_UnitTests();
-void PdfDarkModeImageClassifier_UnitTests();
-void PdfDarkModeOklab_UnitTests();
+bool PdfDarkModeImageStats_UnitTest();
 void SimpleLogTest();
 
 void CommandPaletteModel_UnitTests();
@@ -73,6 +75,9 @@ bool MarkdownToc_UnitTestHtmlLinks();
 bool MarkdownToc_UnitTestHtmlHeadings();
 bool MarkdownToc_UnitTestMermaid();
 bool EbookDoc_UnitTestNormalizeURL();
+bool EbookDoc_UnitTestLoading();
+bool GumboHtmlParser_UnitTest();
+bool DisplayMode_UnitTestZoom();
 bool ExternalViewers_UnitTestPDFXChangePaths();
 bool Canvas_UnitTestScrollLineAmount();
 bool EngineMupdf_UnitTestEbookLineSpacingCss();
@@ -582,6 +587,8 @@ int RunAppUnitTests(bool forAi) {
     }
     printf("Running unit tests\n");
 
+    ArchiveTest();
+    AppendStoreTest();
     BaseUtilTest();
     ByteOrderTests();
     ClipboardImageTest();
@@ -590,6 +597,7 @@ int RunAppUnitTests(bool forAi) {
     DictTest();
     DirRemoveAllTest();
     FileUtilTest();
+    UpdateTempFileTests();
     GuessFileTypeTest();
     JsonTest();
     RefHoverTest();
@@ -607,8 +615,7 @@ int RunAppUnitTests(bool forAi) {
     MobiDoc_UnitTests();
     PagePosition_UnitTests();
     PdfSync_UnitTests();
-    PdfDarkModeImageClassifier_UnitTests();
-    PdfDarkModeOklab_UnitTests();
+    utassert(PdfDarkModeImageStats_UnitTest());
     SumatraPDF_UnitTests();
 
     ParseTip_UnitTests();
@@ -625,6 +632,9 @@ int RunAppUnitTests(bool forAi) {
     utassert(MarkdownToc_UnitTestHtmlHeadings());
     utassert(MarkdownToc_UnitTestMermaid());
     utassert(EbookDoc_UnitTestNormalizeURL());
+    utassert(EbookDoc_UnitTestLoading());
+    utassert(GumboHtmlParser_UnitTest());
+    utassert(DisplayMode_UnitTestZoom());
     utassert(ExternalViewers_UnitTestPDFXChangePaths());
     utassert(Canvas_UnitTestScrollLineAmount());
     utassert(EngineMupdf_UnitTestEbookLineSpacingCss());

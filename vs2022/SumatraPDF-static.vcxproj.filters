@@ -40,6 +40,15 @@
     <Filter Include="src\regress">
       <UniqueIdentifier>{F7CE8947-6384-023D-EC78-FC13582DF940}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\shared">
+      <UniqueIdentifier>{D3351079-BFED-51C6-28F5-2A2214CCECB6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\shared\gui">
+      <UniqueIdentifier>{C772284F-B340-1C55-9CD4-8C7B8841F8B9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\shared\tests">
+      <UniqueIdentifier>{F5F2F2BB-E1EB-110E-0A1E-F792F675F119}</UniqueIdentifier>
+    </Filter>
     <Filter Include="src\testcode">
       <UniqueIdentifier>{D744682D-C3A7-F7D1-6C2D-3088586FC354}</UniqueIdentifier>
     </Filter>
@@ -126,13 +135,7 @@
     <ClInclude Include="..\src\AnnotPlacement.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\AnnotSearch.h">
-      <Filter>src</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\AnnotTextPopup.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\Annotation.h">
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="..\src\AppSettings.h">
@@ -141,25 +144,7 @@
     <ClInclude Include="..\src\AppTools.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\AvifReader.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\BuildConfig.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\CachedObjects.h">
-      <Filter>src</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\Canvas.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\ChapterTable.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\ChmDump.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\ChmFile.h">
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="..\src\ChmModel.h">
@@ -171,13 +156,7 @@
     <ClInclude Include="..\src\CommandPalette.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\Commands.h">
-      <Filter>src</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\DarkMode.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\DisplayMode.h">
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="..\src\DisplayModel.h">
@@ -186,34 +165,13 @@
     <ClInclude Include="..\src\DocController.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\DocProperties.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\DocumentLayout.h">
-      <Filter>src</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\DocumentProperties.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\EbookDoc.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\EbookFormatter.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\EmbeddedResources.h">
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="..\src\EngineAll.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\EngineBase.h">
-      <Filter>src</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\EngineMupdf.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\EutlTrust.h">
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="..\src\ExifDump.h">
@@ -228,16 +186,10 @@
     <ClInclude Include="..\src\Favorites.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\FileHistory.h">
-      <Filter>src</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\FileThumbnails.h">
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="..\src\FilterHighlightDraw.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\FilterUtil.h">
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="..\src\FindBar.h">
@@ -258,19 +210,7 @@
     <ClInclude Include="..\src\GlobalHotkeys.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\GoogleLens.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\GumboHtmlParser.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\HangDetector.h">
-      <Filter>src</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\HomePage.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\HtmlFormatter.h">
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="..\src\ImageReader.h">
@@ -282,16 +222,10 @@
     <ClInclude Include="..\src\Installer.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\JxlReader.h">
-      <Filter>src</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\KeyboardHelp.h">
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="..\src\LinkFollow.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\LitDoc.h">
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="..\src\MainWindow.h">
@@ -300,16 +234,10 @@
     <ClInclude Include="..\src\MarkdownModel.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\MarkdownToc.h">
-      <Filter>src</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\Menu.h">
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="..\src\MergePdf.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\MobiDoc.h">
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="..\src\NavFilesInFolder.h">
@@ -321,34 +249,10 @@
     <ClInclude Include="..\src\OverlayScrollbar.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\PagePosition.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\PageRenderPolicy.h">
-      <Filter>src</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\PageRenderService.h">
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="..\src\PageThumbnails.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\PalmDbReader.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\PdfCad.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\PdfCreator.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\PdfDarkMode.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\PdfDarkModeInternal.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\PdfSync.h">
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="..\src\PdfTools.h">
@@ -360,16 +264,7 @@
     <ClInclude Include="..\src\Print.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\PrintWin11.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\ProgressUpdateUI.h">
-      <Filter>src</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\ReadAloud.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\ReaderModel.h">
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="..\src\ReadingAutoScroll.h">
@@ -408,9 +303,6 @@
     <ClInclude Include="..\src\Selection.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\SelectionHandlers.h">
-      <Filter>src</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\SelectionToolbar.h">
       <Filter>src</Filter>
     </ClInclude>
@@ -430,9 +322,6 @@
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="..\src\StressTesting.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\SumatraControl.h">
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="..\src\SumatraDialogs.h">
@@ -459,28 +348,16 @@
     <ClInclude Include="..\src\Tabs.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\TextSearch.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\TextSelection.h">
-      <Filter>src</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\Theme.h">
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="..\src\Toolbar.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\Translations.h">
-      <Filter>src</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\UpdateCheck.h">
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="..\src\Version.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\WebpReader.h">
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="..\src\WindowTab.h">
@@ -513,16 +390,10 @@
     <ClInclude Include="..\src\gui\PlatformCanvas.h">
       <Filter>src\gui</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\gui\PlatformFont.h">
-      <Filter>src\gui</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\gui\PlatformText.h">
       <Filter>src\gui</Filter>
     </ClInclude>
     <ClInclude Include="..\src\gui\PlatformWindow.h">
-      <Filter>src\gui</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\gui\UIModels.h">
       <Filter>src\gui</Filter>
     </ClInclude>
     <ClInclude Include="..\src\gui\VirtCtrl.h">
@@ -551,6 +422,147 @@
     </ClInclude>
     <ClInclude Include="..\src\resource.h">
       <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\shared\AnnotSearch.h">
+      <Filter>src\shared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\shared\Annotation.h">
+      <Filter>src\shared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\shared\AvifReader.h">
+      <Filter>src\shared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\shared\BuildConfig.h">
+      <Filter>src\shared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\shared\CachedObjects.h">
+      <Filter>src\shared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\shared\ChapterTable.h">
+      <Filter>src\shared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\shared\ChmDump.h">
+      <Filter>src\shared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\shared\ChmFile.h">
+      <Filter>src\shared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\shared\Commands.h">
+      <Filter>src\shared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\shared\DisplayMode.h">
+      <Filter>src\shared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\shared\DocProperties.h">
+      <Filter>src\shared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\shared\DocumentLayout.h">
+      <Filter>src\shared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\shared\EbookDoc.h">
+      <Filter>src\shared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\shared\EbookFormatter.h">
+      <Filter>src\shared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\shared\EmbeddedResources.h">
+      <Filter>src\shared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\shared\EngineBase.h">
+      <Filter>src\shared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\shared\EutlTrust.h">
+      <Filter>src\shared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\shared\FileHistory.h">
+      <Filter>src\shared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\shared\FilterUtil.h">
+      <Filter>src\shared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\shared\GoogleLens.h">
+      <Filter>src\shared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\shared\GumboHtmlParser.h">
+      <Filter>src\shared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\shared\HangDetector.h">
+      <Filter>src\shared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\shared\HtmlFormatter.h">
+      <Filter>src\shared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\shared\JxlReader.h">
+      <Filter>src\shared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\shared\LitDoc.h">
+      <Filter>src\shared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\shared\MarkdownToc.h">
+      <Filter>src\shared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\shared\MobiDoc.h">
+      <Filter>src\shared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\shared\PagePosition.h">
+      <Filter>src\shared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\shared\PageRenderPolicy.h">
+      <Filter>src\shared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\shared\PalmDbReader.h">
+      <Filter>src\shared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\shared\PdfCad.h">
+      <Filter>src\shared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\shared\PdfCreator.h">
+      <Filter>src\shared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\shared\PdfDarkMode.h">
+      <Filter>src\shared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\shared\PdfDate.h">
+      <Filter>src\shared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\shared\PdfSync.h">
+      <Filter>src\shared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\shared\PrintWin11.h">
+      <Filter>src\shared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\shared\ProgressUpdateUI.h">
+      <Filter>src\shared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\shared\ReaderModel.h">
+      <Filter>src\shared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\shared\SelectionHandlers.h">
+      <Filter>src\shared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\shared\SumatraControl.h">
+      <Filter>src\shared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\shared\TextSearch.h">
+      <Filter>src\shared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\shared\TextSelection.h">
+      <Filter>src\shared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\shared\Translations.h">
+      <Filter>src\shared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\shared\UpdateTemp.h">
+      <Filter>src\shared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\shared\WebpReader.h">
+      <Filter>src\shared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\shared\gui\PlatformFont.h">
+      <Filter>src\shared\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\shared\gui\UIModels.h">
+      <Filter>src\shared\gui</Filter>
     </ClInclude>
     <ClInclude Include="..\src\testcode\test-app.h">
       <Filter>src\testcode</Filter>
@@ -644,9 +656,6 @@
     <ClCompile Include="..\src\AnnotPlacement.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\AnnotSearch.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\AnnotTextPopup.cpp">
       <Filter>src</Filter>
     </ClCompile>
@@ -657,9 +666,6 @@
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\src\AppTools.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\AvifReader.cpp">
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\src\BasePch.cpp">
@@ -686,15 +692,6 @@
     <ClCompile Include="..\src\ChangeThemeDialog.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\ChapterTable.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\ChmDump.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\ChmFile.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\ChmModel.cpp">
       <Filter>src</Filter>
     </ClCompile>
@@ -704,55 +701,22 @@
     <ClCompile Include="..\src\CommandPalette.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\Commands.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\CustomZoomDialog.cpp">
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\src\DarkMode.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\DisplayMode.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\DisplayModel.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\DocController.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\DocProperties.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\DocumentLayout.cpp">
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\src\DocumentProperties.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\EbookDoc.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\EbookFormatter.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\EbookSettingsDialog.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\EmbeddedResources.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\EngineBase.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\EngineCreate.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\EngineDjvuDec.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\EngineDump.cpp">
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\src\EngineDvi.cpp">
@@ -773,9 +737,6 @@
     <ClCompile Include="..\src\EutlTrust.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\ExifDump.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\ExplorerQuickLook.cpp">
       <Filter>src</Filter>
     </ClCompile>
@@ -785,16 +746,10 @@
     <ClCompile Include="..\src\Favorites.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\FileHistory.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\FileThumbnails.cpp">
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\src\FilterHighlightDraw.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\FilterUtil.cpp">
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\src\FindBar.cpp">
@@ -824,16 +779,10 @@
     <ClCompile Include="..\src\GoogleLens.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\GumboHtmlParser.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\HangDetector.cpp">
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\src\HomePage.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\HtmlFormatter.cpp">
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\src\ImageEditHostSumatra.cpp">
@@ -854,16 +803,10 @@
     <ClCompile Include="..\src\InverseSearchDialog.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\JxlReader.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\KeyboardHelp.cpp">
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\src\LinkFollow.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\LitDoc.cpp">
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\src\MainWindow.cpp">
@@ -872,16 +815,10 @@
     <ClCompile Include="..\src\MarkdownModel.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\MarkdownToc.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\Menu.cpp">
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\src\MergePdf.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\MobiDoc.cpp">
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\src\NavFilesInFolder.cpp">
@@ -896,73 +833,19 @@
     <ClCompile Include="..\src\PageGridDialog.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\PagePosition.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\PageRenderPolicy.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\PageRenderService.cpp">
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\src\PageThumbnails.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\PalmDbReader.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\PdfCad.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\PdfCreator.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\PdfDarkModeAnalysis.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\PdfDarkModeCache.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\PdfDarkModeColor.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\PdfDarkModeDevice.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\PdfDarkModeEngineCache.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\PdfDarkModeImageBgBlend.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\PdfDarkModeImageClassifier.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\PdfDarkModeImageRules.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\PdfDarkModeImageStats.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\PdfDarkModeOklab.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\PdfDarkModeProfile.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\PdfDarkModeScanProcess.cpp">
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\src\PdfSign.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\PdfSync.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\PdfTools.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\PngOptimizer.cpp">
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\src\Print.cpp">
@@ -972,9 +855,6 @@
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\src\ReadAloud.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\ReaderModel.cpp">
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\src\ReadingAutoScroll.cpp">
@@ -989,12 +869,6 @@
     <ClCompile Include="..\src\RefHoverCanvas.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\RefHoverDetect.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\RefHoverInternal.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\RefHoverPopup.cpp">
       <Filter>src</Filter>
     </ClCompile>
@@ -1002,15 +876,6 @@
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\src\RefHoverShow.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\RefHoverText.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\RefHoverTextDetect.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\RegistryInstaller.cpp">
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\src\RegistryPreview.cpp">
@@ -1070,9 +935,6 @@
     <ClCompile Include="..\src\StressTesting.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\SumatraConfig.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\SumatraControl.cpp">
       <Filter>src</Filter>
     </ClCompile>
@@ -1112,12 +974,6 @@
     <ClCompile Include="..\src\Tests.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\TextSearch.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\TextSelection.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\TextViewWnd.cpp">
       <Filter>src</Filter>
     </ClCompile>
@@ -1125,9 +981,6 @@
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\src\Toolbar.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\TranslationLangs.cpp">
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\src\Translations.cpp">
@@ -1139,9 +992,6 @@
     <ClCompile Include="..\src\UpdateCheck.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\WebpReader.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\WindowTab.cpp">
       <Filter>src</Filter>
     </ClCompile>
@@ -1150,6 +1000,12 @@
     </ClCompile>
     <ClCompile Include="..\src\base\CrashHandler.cpp">
       <Filter>src\base</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\base\tests\AppendStore_ut.cpp">
+      <Filter>src\base\tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\base\tests\Archive_ut.cpp">
+      <Filter>src\base\tests</Filter>
     </ClCompile>
     <ClCompile Include="..\src\base\tests\Base_ut.cpp">
       <Filter>src\base\tests</Filter>
@@ -1167,6 +1023,9 @@
       <Filter>src\base\tests</Filter>
     </ClCompile>
     <ClCompile Include="..\src\base\tests\Dict_ut.cpp">
+      <Filter>src\base\tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\base\tests\FileWatcher_posix_ut.cpp">
       <Filter>src\base\tests</Filter>
     </ClCompile>
     <ClCompile Include="..\src\base\tests\File_ut.cpp">
@@ -1223,13 +1082,7 @@
     <ClCompile Include="..\src\gui\PasswordDialog.cpp">
       <Filter>src\gui</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\gui\PlatformFont.cpp">
-      <Filter>src\gui</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\gui\PlatformText.cpp">
-      <Filter>src\gui</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\gui\UIModels.cpp">
       <Filter>src\gui</Filter>
     </ClCompile>
     <ClCompile Include="..\src\gui\UiPlatform.cpp">
@@ -1295,6 +1148,183 @@
     <ClCompile Include="..\src\regress\Regress.cpp">
       <Filter>src\regress</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\shared\AnnotSearch.cpp">
+      <Filter>src\shared</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\shared\AvifReader.cpp">
+      <Filter>src\shared</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\shared\ChapterTable.cpp">
+      <Filter>src\shared</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\shared\ChmDump.cpp">
+      <Filter>src\shared</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\shared\ChmFile.cpp">
+      <Filter>src\shared</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\shared\Commands.cpp">
+      <Filter>src\shared</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\shared\DisplayMode.cpp">
+      <Filter>src\shared</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\shared\DocController.cpp">
+      <Filter>src\shared</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\shared\DocProperties.cpp">
+      <Filter>src\shared</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\shared\DocumentLayout.cpp">
+      <Filter>src\shared</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\shared\EbookDoc.cpp">
+      <Filter>src\shared</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\shared\EbookFormatter.cpp">
+      <Filter>src\shared</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\shared\EmbeddedResources.cpp">
+      <Filter>src\shared</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\shared\EngineBase.cpp">
+      <Filter>src\shared</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\shared\EngineDjvuDec.cpp">
+      <Filter>src\shared</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\shared\ExifDump.cpp">
+      <Filter>src\shared</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\shared\FileHistory.cpp">
+      <Filter>src\shared</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\shared\FilterUtil.cpp">
+      <Filter>src\shared</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\shared\GumboHtmlParser.cpp">
+      <Filter>src\shared</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\shared\HtmlFormatter.cpp">
+      <Filter>src\shared</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\shared\JxlReader.cpp">
+      <Filter>src\shared</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\shared\LitDoc.cpp">
+      <Filter>src\shared</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\shared\MarkdownToc.cpp">
+      <Filter>src\shared</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\shared\MobiDoc.cpp">
+      <Filter>src\shared</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\shared\PagePosition.cpp">
+      <Filter>src\shared</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\shared\PageRenderPolicy.cpp">
+      <Filter>src\shared</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\shared\PalmDbReader.cpp">
+      <Filter>src\shared</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\shared\PdfCad.cpp">
+      <Filter>src\shared</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\shared\PdfDarkModeColor.cpp">
+      <Filter>src\shared</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\shared\PdfDarkModeImageStats.cpp">
+      <Filter>src\shared</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\shared\PdfDarkModeProfile.cpp">
+      <Filter>src\shared</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\shared\PdfDate.cpp">
+      <Filter>src\shared</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\shared\PdfSync.cpp">
+      <Filter>src\shared</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\shared\PngOptimizer.cpp">
+      <Filter>src\shared</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\shared\ReaderModel.cpp">
+      <Filter>src\shared</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\shared\RefHoverDetect.cpp">
+      <Filter>src\shared</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\shared\RefHoverInternal.cpp">
+      <Filter>src\shared</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\shared\RefHoverText.cpp">
+      <Filter>src\shared</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\shared\RefHoverTextDetect.cpp">
+      <Filter>src\shared</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\shared\RegistryInstaller.cpp">
+      <Filter>src\shared</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\shared\SumatraConfig.cpp">
+      <Filter>src\shared</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\shared\TextSearch.cpp">
+      <Filter>src\shared</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\shared\TextSelection.cpp">
+      <Filter>src\shared</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\shared\TranslationLangs.cpp">
+      <Filter>src\shared</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\shared\UpdateTemp.cpp">
+      <Filter>src\shared</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\shared\WebpReader.cpp">
+      <Filter>src\shared</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\shared\gui\PlatformFont.cpp">
+      <Filter>src\shared\gui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\shared\gui\UIModels.cpp">
+      <Filter>src\shared\gui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\shared\tests\AnnotSearch_ut.cpp">
+      <Filter>src\shared\tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\shared\tests\CachedObjects_ut.cpp">
+      <Filter>src\shared\tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\shared\tests\ChapterTable_ut.cpp">
+      <Filter>src\shared\tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\shared\tests\EngineDjvuDec_ut.cpp">
+      <Filter>src\shared\tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\shared\tests\MobiDoc_ut.cpp">
+      <Filter>src\shared\tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\shared\tests\PagePosition_ut.cpp">
+      <Filter>src\shared\tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\shared\tests\PageRenderPolicy_ut.cpp">
+      <Filter>src\shared\tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\shared\tests\ReadAloudHighlight_ut.cpp">
+      <Filter>src\shared\tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\shared\tests\RenderCache_ut.cpp">
+      <Filter>src\shared\tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\shared\tests\SimpleLog_ut.cpp">
+      <Filter>src\shared\tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\shared\tests\TextSelection_ut.cpp">
+      <Filter>src\shared\tests</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\testcode\TestApp.cpp">
       <Filter>src\testcode</Filter>
     </ClCompile>
@@ -1304,58 +1334,19 @@
     <ClCompile Include="..\src\testcode\TestTab.cpp">
       <Filter>src\testcode</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\tests\AnnotSearch_ut.cpp">
-      <Filter>src\tests</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\tests\CachedObjects_ut.cpp">
-      <Filter>src\tests</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\tests\ChapterTable_ut.cpp">
-      <Filter>src\tests</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\tests\CommandPalette_ut.cpp">
-      <Filter>src\tests</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\tests\EngineDjvuDec_ut.cpp">
       <Filter>src\tests</Filter>
     </ClCompile>
     <ClCompile Include="..\src\tests\LitDoc_ut.cpp">
       <Filter>src\tests</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\tests\MobiDoc_ut.cpp">
-      <Filter>src\tests</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\tests\PagePosition_ut.cpp">
-      <Filter>src\tests</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\tests\PageRenderPolicy_ut.cpp">
-      <Filter>src\tests</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\tests\PdfDarkModeImageClassifier_ut.cpp">
-      <Filter>src\tests</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\tests\PdfDarkModeOklab_ut.cpp">
-      <Filter>src\tests</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\tests\PdfSync_ut.cpp">
-      <Filter>src\tests</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\tests\ReadAloudHighlight_ut.cpp">
-      <Filter>src\tests</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\tests\RenderCache_ut.cpp">
       <Filter>src\tests</Filter>
     </ClCompile>
     <ClCompile Include="..\src\tests\ShortcutParse_ut.cpp">
       <Filter>src\tests</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\tests\SimpleLog_ut.cpp">
-      <Filter>src\tests</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\tests\Sumatra_ut.cpp">
-      <Filter>src\tests</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\tests\TextSelection_ut.cpp">
       <Filter>src\tests</Filter>
     </ClCompile>
     <ClCompile Include="..\src\uia\DocumentProvider.cpp">

@@ -11,10 +11,10 @@ import { clangFormatFiles } from "./util";
 // cmd/format.ts run does not dirty the tree (e.g. indented @gen markers).
 const generatedCppFiles = [
   "src/Flags.cpp",
-  "src/Commands.h",
-  "src/Commands.cpp",
+  "src/shared/Commands.h",
+  "src/shared/Commands.cpp",
   "src/Accelerators.cpp",
-  "src/EbookDoc.cpp",
+  "src/shared/EbookDoc.cpp",
   "src/PdfCreator.cpp",
   "src/EngineMupdf.cpp",
   "src/Settings.h",
@@ -306,7 +306,7 @@ type PropMapTarget = { file: string; tag: string; varName: string; entries: Prop
 
 const docPropMaps: PropMapTarget[] = [
   {
-    file: "src/EbookDoc.cpp",
+    file: "src/shared/EbookDoc.cpp",
     tag: "docprop-epub",
     varName: "epubPropsMap",
     entries: [
@@ -339,10 +339,10 @@ const docPropMaps: PropMapTarget[] = [
 
 // parse `enum class DocProp : u8 { None = 0, Title = 1, ... }` -> { Title: 1, ... }
 function parseDocPropValues(rootDir: string): Record<string, number> {
-  const src = readFileSync(join(rootDir, "src", "DocProperties.h"), "utf-8");
+  const src = readFileSync(join(rootDir, "src", "shared", "DocProperties.h"), "utf-8");
   const m = src.match(/enum class DocProp[^{]*\{([^}]*)\}/);
   if (!m) {
-    throw new Error("DocProp enum not found in src/DocProperties.h");
+    throw new Error("DocProp enum not found in src/shared/DocProperties.h");
   }
   const vals: Record<string, number> = {};
   for (const line of m[1].split("\n")) {

@@ -20,8 +20,9 @@ import { runNamedTests, runSuiteMain, startSuiteProgress, type NamedTest, type S
 import { setTestWindowLayout } from "./winapi.ts";
 import { beginSharedControlledSession, endSharedControlledSession } from "./win-automation.ts";
 import { testit as lintCommandIds } from "./lint-command-ids.ts";
-import { testit as lintMingwSources } from "./lint-mingw-sources.ts";
+import { testit as jpegXlPdf } from "./jpeg-xl-pdf.ts";
 import { testit as buildCli } from "./build-cli.ts";
+import { testit as ngEmbedded } from "./ng-embedded.ts";
 import { testit as combiningMarkFirst } from "./combining-mark-first.ts";
 import { testit as parseTipBrackets } from "./parse-tip-brackets.ts";
 import { testit as issue5840 } from "./issue-5840.ts";
@@ -44,6 +45,7 @@ import { testit as issue2083 } from "./issue-2083.ts";
 import { testit as issue6240 } from "./issue-6240.ts";
 import { testit as issue6241 } from "./issue-6241.ts";
 import { testit as issue5329 } from "./issue-5329.ts";
+import { testit as issue6288 } from "./issue-6288.ts";
 import { testit as issue5718 } from "./issue-5718.ts";
 import { testit as issue5734 } from "./issue-5734.ts";
 import { testit as issue5736 } from "./issue-5736.ts";
@@ -390,19 +392,20 @@ export const tests: NamedTest[] = [
   // first: it drives the home page, whose thumbnail selection follows the
   // mouse, so it is the one test that cares what the machine was doing before
   ["issue-5978", issue5978],
+  ["jpeg-xl-pdf", jpegXlPdf],
+  ["annotation clipboard tests", annotationClipboardTests],
+  ["issue-6276", issue6276],
   ["issue-6269", issue6269],
   ["polyline-annotation-placement", polylineAnnotationPlacement],
   ["toolbar-hover-dropdown", toolbarHoverDropdown],
   ["session-restore-tab-state", sessionRestoreTabState],
   ["exit-edit-pdf-deselects", exitEditPdfDeselects],
-  ["annotation clipboard tests", annotationClipboardTests],
   ["issue-6113", issue6113],
   ["issue-5933", issue5933],
   ["issue-6117", issue6117],
   ["custom-zoom-dialog", customZoomDialog],
   ["annot-color-dropdown", annotColorDropdown],
   ["annot-contents-click-away", annotContentsClickAway],
-  ["lint-mingw-sources", lintMingwSources],
   ["issue-2799", issue2799],
   ["ink-thickness", inkThickness],
   ["ink-annotation-placement", inkAnnotationPlacement],
@@ -484,6 +487,7 @@ export const tests: NamedTest[] = [
   // --- no Sumatra process -------------------------------------------------
   ["lint-command-ids", lintCommandIds],
   ["build-cli", buildCli],
+  ["ng-embedded", ngEmbedded],
   ["parse-tip-brackets", parseTipBrackets],
   ["combining-mark-first", combiningMarkFirst],
   ["issue-5840", issue5840],
@@ -529,6 +533,7 @@ export const tests: NamedTest[] = [
   ["issue-6240", issue6240],
   ["issue-6241", issue6241],
   ["issue-5329", issue5329],
+  ["issue-6288", issue6288],
   ["issue-5718", issue5718],
   ["issue-5734", issue5734],
   ["issue-5736", issue5736],
@@ -615,7 +620,6 @@ export const tests: NamedTest[] = [
   ["issue-6050", issue6050],
   ["issue-6265", issue6265],
   ["issue-6266", issue6266],
-  ["issue-6276", issue6276],
   ["issue-6279", issue6279],
   ["issue-6280", issue6280],
   ["issue-6270", issue6270],

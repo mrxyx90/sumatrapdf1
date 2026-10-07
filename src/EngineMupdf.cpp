@@ -23,7 +23,6 @@ extern "C" {
 #include "gui/UIModels.h"
 #include "EngineBase.h"
 #include "PdfDarkMode.h"
-#include "PdfDarkModeInternal.h"
 #include "EngineAll.h"
 #include "EbookBase.h"
 #include "EbookDoc.h"
@@ -207,7 +206,7 @@ struct PageDestinationMupdf : IPageDestination {
         outline = o;
     }
 
-    RectF GetRect2() override {
+    RectF GetRect() override {
         // Prefer URI-resolved coords (page-level /Fit and /XYZ nulls become
         // kDestUseDefault). outline->x/y are often 0 and would scroll to the
         // bottom of the page in PDF space. FitR keeps width/height on destW/H;
@@ -223,7 +222,7 @@ struct PageDestinationMupdf : IPageDestination {
         return rect;
     }
 
-    RectF GetDestPoint2() override {
+    RectF GetDestPoint() override {
         if (hasResolvedCoords) {
             return RectF{destX, destY, 0, 0};
         }
@@ -233,18 +232,18 @@ struct PageDestinationMupdf : IPageDestination {
         return {};
     }
 
-    float GetZoom2() override { return destZoom; }
+    float GetZoom() override { return destZoom; }
 
     ~PageDestinationMupdf() override {
         str::Free(value);
         str::Free(name);
     }
 
-    Str GetValue2() override;
-    Str GetName2() override;
+    Str GetValue() override;
+    Str GetName() override;
 };
 
-Str PageDestinationMupdf::GetValue2() {
+Str PageDestinationMupdf::GetValue() {
     if (value) {
         return value;
     }
@@ -256,7 +255,7 @@ Str PageDestinationMupdf::GetValue2() {
     return value;
 }
 
-Str PageDestinationMupdf::GetName2() {
+Str PageDestinationMupdf::GetName() {
     if (name) {
         return name;
     }
@@ -2473,246 +2472,6 @@ static fz_link* MakePushButtonWidgetLinks(fz_context* ctx, pdf_document* doc, pd
     return head;
 }
 
-static void SkipJsWs(const char*& p, const char* end) {
-    while (p < end && str::IsWs(*p)) {
-        p++;
-    }
-}
-
-static bool IsJsIdentStart(char c) {
-    return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || c == '_' || c == '$';
-}
-
-static bool IsJsIdentChar(char c) {
-    return IsJsIdentStart(c) || (c >= '0' && c <= '9');
-}
-
-static int JsHexNibble(char c) {
-    if (c >= '0' && c <= '9') {
-        return c - '0';
-    }
-    if (c >= 'a' && c <= 'f') {
-        return c - 'a' + 10;
-    }
-    if (c >= 'A' && c <= 'F') {
-        return c - 'A' + 10;
-    }
-    return -1;
-}
-
-static bool IsJsReservedCallName(Str ident) {
-    return str::Eq(ident, StrL("function")) || str::Eq(ident, StrL("if")) || str::Eq(ident, StrL("for")) ||
-           str::Eq(ident, StrL("while")) || str::Eq(ident, StrL("switch")) || str::Eq(ident, StrL("catch")) ||
-           str::Eq(ident, StrL("with")) || str::Eq(ident, StrL("return")) || str::Eq(ident, StrL("typeof")) ||
-           str::Eq(ident, StrL("void")) || str::Eq(ident, StrL("delete")) || str::Eq(ident, StrL("new")) ||
-           str::Eq(ident, StrL("throw")) || str::Eq(ident, StrL("else")) || str::Eq(ident, StrL("do")) ||
-           str::Eq(ident, StrL("try"));
-}
-
-// Decode one JS '...' or "..." string at p. Advances p past the closing quote.
-static bool ParseJsQuotedString(const char*& p, const char* end, Str* out) {
-    *out = {};
-    if (p >= end || (*p != '"' && *p != '\'')) {
-        return false;
-    }
-    char quote = *p++;
-    str::Builder b;
-    while (p < end && *p != quote) {
-        char c = *p++;
-        if (c != '\\') {
-            b.AppendChar(c);
-            continue;
-        }
-        if (p >= end) {
-            break;
-        }
-        char e = *p++;
-        switch (e) {
-            case 'n':
-                b.AppendChar('\n');
-                break;
-            case 'r':
-                b.AppendChar('\r');
-                break;
-            case 't':
-                b.AppendChar('\t');
-                break;
-            case 'b':
-                b.AppendChar('\b');
-                break;
-            case 'f':
-                b.AppendChar('\f');
-                break;
-            case 'v':
-                b.AppendChar('\v');
-                break;
-            case '0':
-                b.AppendChar('\0');
-                break;
-            case '\\':
-            case '\'':
-            case '"':
-                b.AppendChar(e);
-                break;
-            case 'x': {
-                if (p + 2 > end) {
-                    b.AppendChar(e);
-                    break;
-                }
-                int h1 = JsHexNibble(p[0]);
-                int h2 = JsHexNibble(p[1]);
-                if (h1 < 0 || h2 < 0) {
-                    b.AppendChar(e);
-                    break;
-                }
-                p += 2;
-                b.AppendChar((char)((h1 << 4) | h2));
-                break;
-            }
-            case 'u': {
-                if (p + 4 > end) {
-                    b.AppendChar(e);
-                    break;
-                }
-                int cp = 0;
-                bool ok = true;
-                for (int i = 0; i < 4; i++) {
-                    int h = JsHexNibble(p[i]);
-                    if (h < 0) {
-                        ok = false;
-                        break;
-                    }
-                    cp = (cp << 4) | h;
-                }
-                if (!ok) {
-                    b.AppendChar(e);
-                    break;
-                }
-                p += 4;
-                char utf8[4];
-                int off = 0;
-                str::Utf8Encode(utf8, off, cp);
-                b.Append(Str(utf8, off));
-                break;
-            }
-            default:
-                b.AppendChar(e);
-                break;
-        }
-    }
-    if (p >= end || *p != quote) {
-        return false;
-    }
-    p++;
-    *out = b.TakeStr();
-    return true;
-}
-
-static bool SkipJsNested(const char*& p, const char* end, char open, char close) {
-    if (p >= end || *p != open) {
-        return false;
-    }
-    int depth = 1;
-    p++;
-    while (p < end && depth > 0) {
-        if (*p == '"' || *p == '\'') {
-            Str dummy;
-            if (!ParseJsQuotedString(p, end, &dummy)) {
-                str::Free(dummy);
-                return false;
-            }
-            str::Free(dummy);
-            continue;
-        }
-        if (*p == open) {
-            depth++;
-        } else if (*p == close) {
-            depth--;
-        }
-        p++;
-    }
-    return depth == 0;
-}
-
-// Collect the quoted arguments of app.popUpMenu(...) / app.popUpMenuEx(...).
-static bool ParseJsPopUpMenuItems(Str js, StrVec& items) {
-    int idx = str::IndexOf(js, StrL("popUpMenu"));
-    if (idx < 0) {
-        return false;
-    }
-    const char* p = js.s + idx + 9; // strlen("popUpMenu")
-    const char* end = js.s + len(js);
-    if (p + 2 <= end && p[0] == 'E' && p[1] == 'x') {
-        p += 2;
-    }
-    SkipJsWs(p, end);
-    if (p >= end || *p != '(') {
-        return false;
-    }
-    p++;
-    while (p < end) {
-        SkipJsWs(p, end);
-        if (p >= end) {
-            break;
-        }
-        if (*p == ')') {
-            break;
-        }
-        if (*p == ',') {
-            p++;
-            continue;
-        }
-        if (*p == '[') {
-            if (!SkipJsNested(p, end, '[', ']')) {
-                break;
-            }
-            continue;
-        }
-        if (*p == '"' || *p == '\'') {
-            Str item;
-            if (!ParseJsQuotedString(p, end, &item)) {
-                str::Free(item);
-                break;
-            }
-            items.Append(item);
-            str::Free(item);
-            continue;
-        }
-        p++;
-    }
-    return len(items) > 0;
-}
-
-// First identifier that is followed by '(', skipping JS keywords.
-static Str ExtractJsCallName(Str js) {
-    if (len(js) == 0) {
-        return {};
-    }
-    const char* p = js.s;
-    const char* end = js.s + len(js);
-    while (p < end) {
-        SkipJsWs(p, end);
-        if (p >= end) {
-            break;
-        }
-        if (!IsJsIdentStart(*p)) {
-            p++;
-            continue;
-        }
-        const char* start = p;
-        p++;
-        while (p < end && IsJsIdentChar(*p)) {
-            p++;
-        }
-        Str ident{start, (int)(p - start)};
-        SkipJsWs(p, end);
-        if (p < end && *p == '(' && !IsJsReservedCallName(ident)) {
-            return ident;
-        }
-    }
-    return {};
-}
-
 static char* LookupNamedJavaScript(fz_context* ctx, pdf_document* doc, Str name) {
     if (!ctx || !doc || len(name) == 0) {
         return nullptr;
@@ -3651,7 +3410,6 @@ EngineMupdf::EngineMupdf() {
     kind = kindEngineMupdf;
     defaultExt = str::Dup(StrL(".pdf"));
     fileDPI = 72.0f;
-    darkModeEngineCache = PdfDarkModeEngineCacheCreate();
 
     fz_locks_ctx.user = this;
     fz_locks_ctx.lock = fz_lock_context_cs;
@@ -3699,7 +3457,7 @@ static void FreePageInfo(fz_context* ctx, FzPageInfo* pi) {
         fz_drop_display_list(ctx, pi->displayList);
         pi->displayList = nullptr;
     }
-    PdfDarkModeInvalidatePage(ctx, pi);
+    pi->ResetDarkMode();
     if (pi->page) {
         fz_drop_page(ctx, pi->page);
         pi->page = nullptr;
@@ -3722,10 +3480,6 @@ EngineMupdf::~EngineMupdf() {
     pagesLock.Lock();
 
     auto* ctx = _ctx;
-    if (darkModeEngineCache) {
-        PdfDarkModeEngineCacheFree(ctx, darkModeEngineCache);
-        darkModeEngineCache = nullptr;
-    }
     for (Vec<FzPageInfo*>* v : chapterPages) {
         if (!v) {
             continue;
@@ -4005,8 +3759,8 @@ static Str PalmDocToHTML(Str path) {
     if (!doc) {
         return {};
     }
-    // GetHtmlData() is a view into doc, dup before deleting it
-    Str html = str::Dup(doc->GetHtmlData());
+    // Copy the HTML before deleting its owner.
+    Str html = str::Dup(ToStr(doc->htmlData));
     delete doc;
     return html;
 }
@@ -4021,7 +3775,7 @@ bool EngineMupdf::Load(Str path, PasswordUI* pwdUI) {
     SetFilePath(path);
 
     auto ext = path::GetExtTemp(path);
-    SetDefaultExt(defaultExt, ext);
+    str::ReplaceWithCopy(&defaultExt, ext);
 
     int streamNo = -1;
     TempStr fnCopy = ParseEmbeddedStreamNumber(path, &streamNo);
@@ -4416,7 +4170,7 @@ bool EngineMupdf_UnitTestPageLabels() {
     if (!engine) {
         return false;
     }
-    bool ok = engine->HasPageLabels() && engine->PageCount() == 5 && engine->LogicalPageCount() == 2;
+    bool ok = engine->hasPageLabels && engine->PageCount() == 5 && engine->LogicalPageCount() == 2;
     ok = ok && str::Eq(engine->GetPageLabeTemp(1), StrL("i"));
     ok = ok && str::Eq(engine->GetPageLabeTemp(2), StrL("ii"));
     ok = ok && str::Eq(engine->GetPageLabeTemp(3), StrL("iii"));
@@ -6446,7 +6200,7 @@ static FzPageInfo* GetFzPageInfoLocked(EngineMupdf* e, Location loc, bool loadQu
             // a link that goes somewhere in this document has no URL to show,
             // so show the description the PDF gives it, like other viewers do
             auto* dest = (PageDestinationMupdf*)pel->AsLink();
-            if (dest && len(PageDestGetValue(dest)) == 0) {
+            if (dest && len(dest->GetValue()) == 0) {
                 dest->value = PdfLinkContents(ctx, e->pdfdoc, pdfpage, pageNo, link->rect);
             }
             VecAppend(pageInfo->links, pel);
@@ -6993,7 +6747,7 @@ static u32 DarkLegacySkipHash(FzPageInfo* pageInfo, float zoom, int rotation) {
     u32 h = PdfDarkModeComputeOptionsHash();
     h = (h * 31) + (u32)(zoom * 1000.f);
     h = (h * 31) + (u32)rotation;
-    h = (h * 31) + (u32)GetPreservePdfImagesMinSize();
+    h = (h * 31) + (u32)kPreservePdfImagesMinSize;
     h = (h * 31) + (u32)GetPreservePdfImagesInDarkMode();
     h = (h * 31) + (u32)(pageInfo ? len(pageInfo->images) : 0);
     return h;
@@ -7132,7 +6886,7 @@ static void BuildPageDarkLegacySkipRects(EngineMupdf* engine, FzPageInfo* pageIn
     fz_context* ctx = engine->Ctx();
     fz_page* page = pageInfo->page;
     fz_matrix ctm = engine->viewctm(page, zoom, rotation);
-    int minDx = GetPreservePdfImagesMinSize();
+    int minDx = kPreservePdfImagesMinSize;
     int minDy = minDx;
 
     RectF pageBounds = pageInfo->mediabox;
@@ -7338,13 +7092,9 @@ void EngineMupdf::ToggleCadEnhanceOverride() {
 
 // Transparent backdrop: leave unpainted samples at alpha 0 so the canvas
 // checkerboard (CmdToggleTransparencyGrid) shows through (issue #1809).
-static void ClearRenderedPagePixmap(fz_context* ctx, fz_pixmap* pix, const RenderPageArgs& args, bool objectLevelDark) {
+static void ClearRenderedPagePixmap(fz_context* ctx, fz_pixmap* pix, const RenderPageArgs& args) {
     if (args.transparentBackdrop) {
         fz_clear_pixmap(ctx, pix);
-        return;
-    }
-    if (objectLevelDark && args.darkProfile) {
-        PdfDarkModeClearPixmapToThemeBackground(ctx, pix, args.darkProfile->palette);
         return;
     }
     fz_clear_pixmap_with_value(ctx, pix, 0xff);
@@ -7367,8 +7117,8 @@ static bool RenderAborted(fz_cookie* cookie) {
 // An aborted run stops between a clip push and its pop, so the draw device
 // can't be closed ("items left on stack"). Unhook close on it and on the
 // wrappers that forward to it, so dropping them doesn't warn either.
-static void UnhookAbortedDevices(fz_device* drawDev, fz_device* darkDev, fz_device* outer) {
-    fz_device* devs[] = {drawDev, darkDev, outer};
+static void UnhookAbortedDevices(fz_device* drawDev, fz_device* outer) {
+    fz_device* devs[] = {drawDev, outer};
     for (fz_device* d : devs) {
         if (d) {
             d->close_device = nullptr;
@@ -7464,31 +7214,18 @@ Pixmap* EngineMupdf::RenderPage(RenderPageArgs& args) {
         AutoUnlockMutex rls(&renderLock);
         fz_try(ctx) {
             pix = fz_new_pixmap_with_bbox(ctx, csRgb, ibounds, nullptr, 1);
-            bool objectLevelDark = args.darkProfile && DarkModeProfileUsesObjectLevel(args.darkProfile);
-            ClearRenderedPagePixmap(ctx, pix, args, objectLevelDark);
+            ClearRenderedPagePixmap(ctx, pix, args);
             dev = fz_new_draw_device(ctx, ctm, pix);
             fz_device* drawDev = dev;
-            fz_device* darkDev = nullptr;
             if (disableAntiAlias) {
                 fz_enable_device_hints(ctx, dev, FZ_DONT_INTERPOLATE_IMAGES);
-            }
-            DarkModeReplayState replayState{};
-            if (objectLevelDark && pdfdoc) {
-                DarkModePageAnalysis* analysis =
-                    PdfDarkModeGetOrBuildAnalysis(ctx, pageInfo, keptList, args.darkProfile->hash, darkModeEngineCache);
-                if (analysis) {
-                    dev = PdfDarkModeWrapDevice(ctx, dev, analysis, &args.darkProfile->palette, &replayState,
-                                                darkModeEngineCache, args.darkProfile->hash,
-                                                args.darkProfile->debugOverlay);
-                    darkDev = dev;
-                }
             }
             if (CadEnhanceActive()) {
                 dev = PdfCadEnhanceWrapDevice(ctx, dev);
             }
             fz_run_display_list(ctx, keptList, dev, fz_identity, pRect, fzcookie);
             if (RenderAborted(fzcookie)) {
-                UnhookAbortedDevices(drawDev, darkDev, dev);
+                UnhookAbortedDevices(drawDev, dev);
             } else {
                 fz_close_device(ctx, dev);
                 if (CadEnhanceActive() && cadRasterDominant) {
@@ -7534,7 +7271,7 @@ Pixmap* EngineMupdf::RenderPage(RenderPageArgs& args) {
         fz_try(ctx) {
             pdfpage = pdf_page_from_fz_page(ctx, page);
             pix = fz_new_pixmap_with_bbox(ctx, csRgb, ibounds, nullptr, 1);
-            ClearRenderedPagePixmap(ctx, pix, args, false);
+            ClearRenderedPagePixmap(ctx, pix, args);
             dev = fz_new_draw_device(ctx, ctm, pix);
             if (disableAntiAlias) {
                 fz_enable_device_hints(ctx, dev, FZ_DONT_INTERPOLATE_IMAGES);
@@ -7546,7 +7283,7 @@ Pixmap* EngineMupdf::RenderPage(RenderPageArgs& args) {
                 pdf_run_page_with_usage(ctx, pdfpage, dev, fz_identity, usageZ, fzcookie);
             }
             if (RenderAborted(fzcookie)) {
-                UnhookAbortedDevices(dev, nullptr, nullptr);
+                UnhookAbortedDevices(dev, nullptr);
             } else {
                 fz_close_device(ctx, dev);
                 if (CadEnhanceActive() && cadRasterDominant) {
@@ -7570,7 +7307,7 @@ Pixmap* EngineMupdf::RenderPage(RenderPageArgs& args) {
     } else {
         fz_try(ctx) {
             pix = fz_new_pixmap_with_bbox(ctx, csRgb, ibounds, nullptr, 1);
-            ClearRenderedPagePixmap(ctx, pix, args, false);
+            ClearRenderedPagePixmap(ctx, pix, args);
             dev = fz_new_draw_device(ctx, ctm, pix);
             if (disableAntiAlias) {
                 fz_enable_device_hints(ctx, dev, FZ_DONT_INTERPOLATE_IMAGES);
@@ -8026,7 +7763,6 @@ static PageText ExtractPageTextLocked(EngineMupdf* e, FzPageInfo* pageInfo) {
     PageText res;
     res.text = FzTextPageToUtf8(stext, &res.coords, &res.quads);
     fz_drop_stext_page(ctx, stext);
-    res.len = res.text.len;
     res.nCodepoints = Utf8CodepointCount(res.text);
     return res;
 }
@@ -9455,7 +9191,7 @@ EngineBase* CreateEngineMupdfFromFile(Str path, FileType kind, int displayDPI, P
     }
     TempStr ext = GetExtForFileTypeTemp(kind);
     if (ext) {
-        SetDefaultExt(engine->defaultExt, ext);
+        str::ReplaceWithCopy(&engine->defaultExt, ext);
     }
     return engine;
 }
@@ -9742,7 +9478,7 @@ static void InvalidateFzPageAfterContentChange(EngineMupdf* e, FzPageInfo* pi) {
         fz_drop_display_list(ctx, pi->displayList);
         pi->displayList = nullptr;
     }
-    PdfDarkModeInvalidatePage(ctx, pi);
+    pi->ResetDarkMode();
     pi->contentImagesCollected = false;
     DropPageImages(ctx, pi);
     DeleteVecMembers(pi->links);
@@ -10328,7 +10064,7 @@ void EngineMupdf::ApplyReflowThemeCss() {
     pageCount = n;
 }
 
-// Drop cached dark-mode analyses and processed images; call when dark-mode
+// Drop cached image-preservation rectangles when dark-mode
 // options (theme, color mode, preserve toggle) change. Reflowable docs also
 // restyle with the current theme CSS.
 void EngineMupdfInvalidateDarkMode(EngineBase* engine) {
@@ -10338,23 +10074,7 @@ void EngineMupdfInvalidateDarkMode(EngineBase* engine) {
     }
     epdf->ApplyReflowThemeCss();
     AutoUnlockRecursiveMutex scope(&epdf->pagesLock);
-    fz_context* ctx = epdf->Ctx();
-    if (epdf->darkModeEngineCache) {
-        PdfDarkModeEngineCacheClear(ctx, epdf->darkModeEngineCache);
-    }
-    ForEachPageInfo(epdf, [ctx](FzPageInfo* pi) { PdfDarkModeInvalidatePage(ctx, pi); });
-}
-
-// PDF documents support the object-level smart dark renderer
-bool EngineSupportsSmartDarkMode(EngineBase* engine) {
-    if (!engine || engine->kind != kindEngineMupdf) {
-        return false;
-    }
-    if (!str::EqI(engine->defaultExt, StrL(".pdf"))) {
-        return false;
-    }
-    EngineMupdf* epdf = AsEngineMupdf(engine);
-    return epdf && epdf->pdfdoc;
+    ForEachPageInfo(epdf, [](FzPageInfo* pi) { pi->ResetDarkMode(); });
 }
 
 // Toggle CAD/engineering-drawing line enhancement for this document

@@ -27,7 +27,6 @@ Str ExtractPdfFromPrintReplicaData(Str data);
 EngineBase* CreateEnginePdbFromFile(Str fileName);
 EngineBase* CreateEngineChmFromFile(Str fileName);
 EngineBase* CreateEngineHtmlFromFile(Str fileName);
-EngineBase* CreateEngineTxtFromFile(Str fileName);
 
 void SetDefaultEbookFont(Str name, float size);
 void SetDefaultChmFont(Str name);
@@ -202,7 +201,6 @@ void EngineMupdfSetAnnotAuthorInTooltip(AnnotAuthorVisibility);
 void EngineMupdfToggleCadEnhance(EngineBase* engine);
 bool EngineMupdfCadEnhanceActive(EngineBase* engine);
 void EngineMupdfInvalidateDarkMode(EngineBase* engine);
-bool EngineSupportsSmartDarkMode(EngineBase* engine);
 Str EngineMupdfLoadAttachment(EngineBase*, int attachmentNo);
 Str EngineMupdfLoadAnnotAttachment(EngineBase*, int objNum);
 TempStr EngineMupdfGetPdfInfo(Str path);

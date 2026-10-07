@@ -3,6 +3,7 @@
 
 #include "base/Base.h"
 #include "base/Dict.h"
+#include "base/GuessFileType.h"
 #include "base/UITask.h"
 #include "base/AutoWin.h"
 #include "base/Win.h"
@@ -342,7 +343,7 @@ bool ChmModel::HandleLink(IPageDestination* link, ILinkHandler* /*linkHandler*/)
         logf("ChmModel::HandleLink: unsupported kind '%s'\n", Str(k));
         ReportIf(link->GetKind() != kindDestinationScrollTo);
     }
-    Str url = PageDestGetName(link);
+    Str url = link->GetName();
     if (DisplayPage(url)) {
         return true;
     }
@@ -560,7 +561,7 @@ bool ChmModel::Load(Str fileName) {
     }
 
     // always make the document's homepage page 1
-    TempStr page = strconv::AnsiToUtf8Temp(doc->GetHomePath());
+    TempStr page = strconv::AnsiToUtf8Temp(doc->homePath);
     pages.Append(page);
 
     // parse the ToC here, since page numbering depends on it
@@ -693,11 +694,6 @@ bool ChmModel::OnBeforeNavigate(Str url, bool newWindow) {
     }
 
     return true;
-}
-
-// Load and cache data for a given url inside CHM file.
-static TempStr ColorToCssTemp(Color c) {
-    return fmt("#%02x%02x%02x", (int)GetRValue(c), (int)GetGValue(c), (int)GetBValue(c));
 }
 
 // best-effort theming for CHM pages: we don't control their HTML, so inject
@@ -1000,7 +996,7 @@ bool ChmThumbnailTask::OnBeforeNavigate(Str /*url*/, bool newWindow) {
 
 void ChmThumbnailTask::StartCreateThumbnail(HtmlWindow* hw) {
     this->hw = hw;
-    homeUrl = strconv::AnsiToUtf8(doc->GetHomePath());
+    homeUrl = strconv::AnsiToUtf8(doc->homePath);
     Str trimmedHomeUrl = homeUrl;
     if (str::TrimPrefix(trimmedHomeUrl, StrL("/"))) {
         str::ReplaceWithCopy(&homeUrl, trimmedHomeUrl);
@@ -1087,7 +1083,7 @@ void ChmModel::CreateThumbnail(Size size, const OnBitmapRendered* saveThumbnail)
 }
 
 bool ChmModel::IsSupportedFileType(FileType kind) {
-    return ChmFile::IsSupportedFileType(kind);
+    return kind == FileType::Chm;
 }
 
 ChmModel* ChmModel::Create(Str fileName, DocControllerCallback* cb) {

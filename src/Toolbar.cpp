@@ -3533,7 +3533,7 @@ void CreateToolbar(MainWindow* win) {
     if (newSize > maxFontSize) {
         newSize = maxFontSize;
     }
-    tb->platformFont = GetDefaultGuiFontOfSize(newSize);
+    tb->platformFont = GetUserGuiFont({}, newSize);
     win->toolbarVirt = tb;
     win->hwndToolbar = host->native;
     host->SetFont(tb->platformFont);

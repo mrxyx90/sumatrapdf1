@@ -1,9 +1,24 @@
 function files_in_dir(dir, files_in_dir)
+  if dir == "src" or dir:sub(1, 4) == "src/" then
+    includedirs { "src/shared" }
+  end
   local paths = {}
   for _, file in ipairs(files_in_dir) do
     -- TODO: don't add "/" if dir ends with it of file starts with it
     local path = dir .. "/" .. file
-    table.insert(paths, path)
+    if dir == "src" or dir:sub(1, 4) == "src/" then
+      -- Keep each target's file selection when a file moves to shared.
+      local shared = "src/shared" .. dir:sub(4) .. "/" .. file
+      local shared_paths = os.matchfiles(shared)
+      if #shared_paths == 0 or #os.matchfiles(path) > 0 then
+        table.insert(paths, path)
+      end
+      for _, shared_path in ipairs(shared_paths) do
+        table.insert(paths, shared_path)
+      end
+    else
+      table.insert(paths, path)
+    end
   end
   files(paths)
 end
@@ -12,6 +27,7 @@ function makelzsa_files()
   files_in_dir("src/base", {
     "Base.h",
     "Base.cpp",
+    "Arena.cpp",
     "ByteReaderWriter.*",
     "CmdLineArgs.h",
     "CmdLineArgs.cpp",
@@ -42,8 +58,8 @@ function makelzsa_files()
   })
 
   files {
-    "src/CrashHandlerNoOp.cpp",
-    "src/tools/MakeLzSA.cpp",
+    "src/shared/CrashHandlerNoOp.cpp",
+    "src/shared/tools/MakeLzSA.cpp",
   }
 end
 
@@ -281,6 +297,7 @@ function sumatrapdf_files()
     "AnnotEditToolbar.*",
     "AnnotFilterToolbar.*",
     "AnnotSearch.*",
+    "PdfDate.*",
     "CanvasAboutUI.*",
     "CaptionGlyphs.*",
     "ChmDump.*",
@@ -311,7 +328,6 @@ function sumatrapdf_files()
     "DocController.*",
     "DocProperties.*",
     "EditAnnotations.*",
-    "EngineDump.cpp",
     "ExifDump.*",
     "ExternalViewers.*",
     "Favorites.*",
@@ -400,6 +416,7 @@ function sumatrapdf_files()
     "Translations.*",
     "Uninstaller.cpp",
     "UpdateCheck.*",
+    "UpdateTemp.*",
     "BuildConfig.h",
     "Version.h",
     "VirtWnd.*",
@@ -467,9 +484,11 @@ end
 function base_files()
   files_in_dir("src/base", {
     "ApiHook.*",
+    "AppendStore.*",
     "Archive.*",
     "Base.h",
     "Base.cpp",
+    "Arena.cpp",
     "ByteReaderWriter.*",
     "CmdLineArgs.h",
     "CmdLineArgs.cpp",
@@ -574,19 +593,9 @@ function engines_files()
     "PdfCad.*",
     "PdfCreator.*",
     "PdfDarkMode.h",
-    "PdfDarkModeInternal.h",
-    "PdfDarkModeAnalysis.cpp",
-    "PdfDarkModeCache.cpp",
     "PdfDarkModeColor.cpp",
-    "PdfDarkModeDevice.cpp",
-    "PdfDarkModeEngineCache.cpp",
-    "PdfDarkModeImageBgBlend.cpp",
-    "PdfDarkModeImageClassifier.cpp",
-    "PdfDarkModeImageRules.cpp",
     "PdfDarkModeImageStats.cpp",
-    "PdfDarkModeOklab.cpp",
     "PdfDarkModeProfile.cpp",
-    "PdfDarkModeScanProcess.cpp",
   })
 end
 
@@ -613,10 +622,12 @@ function mupdf_files()
   -- our additions to mupdf (not patches): see src/mupdf/README.md
   files {
     "src/mupdf/mupdf_load_system_font.c",
-    "src/mupdf/noto_sumatra.c",
-    "src/mupdf/noto_sumatra.h",
-    "src/mupdf/pkcs7-windows.c",
-    "src/mupdf/pkcs7-windows.h",
+    "src/shared/mupdf/noto_sumatra.c",
+    "src/shared/mupdf/noto_sumatra.h",
+    "src/shared/mupdf/pkcs7-windows.c",
+    "src/shared/mupdf/pkcs7-windows.h",
+    "src/shared/mupdf/load-jxl.cpp",
+    "src/shared/mupdf/load-jxl.h",
   }
 
   files_in_dir("ext/mupdf/source/cbz", {
@@ -922,6 +933,7 @@ function efi_files()
     "CrashHandlerNoOp.cpp",
     "src/base/Base.h",
     "src/base/Base.cpp",
+    "src/base/Arena.cpp",
     "src/base/Dict*",
     "src/tools/efi/*.cpp",
     "src/tools/efi/*.h",
@@ -931,40 +943,40 @@ end
 function test_engines_files()
   files {
     "src/base/GuessFileType.cpp",
-    "src/AvifReader.cpp",
-    "src/ChapterTable.cpp",
-    "src/ChapterTable.h",
-    "src/DocProperties.cpp",
-    "src/DocProperties.h",
-    "src/EbookDoc.cpp",
-    "src/EmbeddedResources.cpp",
+    "src/shared/AvifReader.cpp",
+    "src/shared/ChapterTable.cpp",
+    "src/shared/ChapterTable.h",
+    "src/shared/DocProperties.cpp",
+    "src/shared/DocProperties.h",
+    "src/shared/EbookDoc.cpp",
+    "src/shared/EmbeddedResources.cpp",
     "src/EngineAll.h",
-    "src/EngineBase.cpp",
-    "src/EngineBase.h",
+    "src/shared/EngineBase.cpp",
+    "src/shared/EngineBase.h",
     "src/CachedObjects.cpp",
-    "src/CachedObjects.h",
-    "src/EngineDjvuDec.cpp",
+    "src/shared/CachedObjects.h",
+    "src/shared/EngineDjvuDec.cpp",
     "src/EngineImages.cpp",
     "src/EngineMupdf.cpp",
     "src/ImageReader.cpp",
-    "src/GumboHtmlParser.cpp",
+    "src/shared/GumboHtmlParser.cpp",
     "src/GumboHelpers.cpp",
-    "src/JxlReader.cpp",
-    "src/LitDoc.cpp",
-    "src/LitDoc.h",
-    "src/MobiDoc.cpp",
-    "src/PalmDbReader.cpp",
-    "src/PdfCad.cpp",
-    "src/PdfCad.h",
-    "src/PdfDarkMode.h",
+    "src/shared/JxlReader.cpp",
+    "src/shared/LitDoc.cpp",
+    "src/shared/LitDoc.h",
+    "src/shared/MobiDoc.cpp",
+    "src/shared/PalmDbReader.cpp",
+    "src/shared/PdfCad.cpp",
+    "src/shared/PdfCad.h",
+    "src/shared/PdfDarkMode.h",
     "src/PdfDarkModeNoOp.cpp",
-    "src/TextSearch.cpp",
-    "src/TextSearch.h",
-    "src/TextSelection.cpp",
-    "src/TextSelection.h",
-    "src/WebpReader.cpp",
-    "src/gui/UIModels.cpp",
-    "src/gui/UIModels.h",
+    "src/shared/TextSearch.cpp",
+    "src/shared/TextSearch.h",
+    "src/shared/TextSelection.cpp",
+    "src/shared/TextSelection.h",
+    "src/shared/WebpReader.cpp",
+    "src/shared/gui/UIModels.cpp",
+    "src/shared/gui/UIModels.h",
     "src/tools/test_engines.cpp",
   }
 end
@@ -1097,8 +1109,8 @@ function search_filter_files()
     "EpubFilter.*",
   })
   files {
-    "src/EbookDoc.*",
-    "src/MobiDoc.*",
+    "src/shared/EbookDoc.*",
+    "src/shared/MobiDoc.*",
     "src/PalmDbReader.*",
   }
   filter {}

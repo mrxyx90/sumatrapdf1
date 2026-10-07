@@ -2154,7 +2154,7 @@ static void MenuUpdateStateForWindow(MainWindow* win) {
     DisplayModel* dm = tab ? tab->AsFixed() : nullptr;
     EngineBase* engine = dm ? dm->GetEngine() : nullptr;
     if (engine) {
-        MenuSetEnabled(win->menu, CmdFindFirst, !engine->IsImageCollection());
+        MenuSetEnabled(win->menu, CmdFindFirst, !engine->isImageCollection);
     }
 
     if (win->IsDocLoaded() && !fileExists) {
@@ -2291,7 +2291,7 @@ void ForgetFileFromFrequentlyRead(MainWindow* win, Str filePath) {
     TempStr path = str::DupTemp(fs->filePath);
     if (len(*fs->favorites) > 0) {
         // only hide documents with favorites
-        FileHistoryMarkFileInexistent(fs->filePath, true);
+        FileHistoryDemote(fs->filePath, true);
     } else {
         FileHistoryRemove(fs);
         DeleteFileState(fs);
@@ -2363,7 +2363,7 @@ void OnWindowContextMenu(MainWindow* win, int x, int y) {
     }
 
     win->contextMenuPt = cursorPos;
-    bool isImageDoc = engine && (engine->IsImageCollection() || engine->kind == kindEngineImage ||
+    bool isImageDoc = engine && (engine->isImageCollection || engine->kind == kindEngineImage ||
                                  engine->kind == kindEngineImageDir || engine->kind == kindEngineComicBooks);
     win->contextMenuPtValid = !isImageDoc && ReadAloudCanReadFromCursor(dm, cursorPos);
     HMENU readAloudCtxMenu = GetReadAloudContextSubmenu();
@@ -2620,7 +2620,7 @@ void OnWindowContextMenu(MainWindow* win, int x, int y) {
             if (len(data) == 0) {
                 return;
             }
-            Str fileName = pd->GetValue2();
+            Str fileName = pd->GetValue();
             TempStr dir = path::GetDirTemp(filePath);
             fileName = path::GetBaseNameTemp(fileName);
             TempStr dstPath = path::JoinTemp(dir, fileName);

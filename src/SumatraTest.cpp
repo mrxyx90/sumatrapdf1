@@ -161,9 +161,9 @@ TempStr SearchResultTemp(Str pdfPath, Str needle, Str password) {
         auto* ts = new TextSearch(engine);
         ts->SetDirection(TextSearch::Direction::Forward);
         ts->SetMatchCase(false);
-        TextSel* sel = ts->FindFirst(1, needle);
-        if (sel && sel->len > 0) {
-            out.Append(fmt("FOUND needle=%s page=%d\n", needle, sel->pages[0]));
+        Vec<TextSel>* sel = ts->FindFirst(1, needle);
+        if (sel && len(*sel) > 0) {
+            out.Append(fmt("FOUND needle=%s page=%d\n", needle, (*sel)[0].pageNo));
         } else {
             out.Append(fmt("NOTFOUND needle=%s\n", needle));
         }
@@ -193,19 +193,27 @@ TempStr FindPageRangeResultTemp(Str pdfPath, Str needle, int first, int last, St
     auto* ts = new TextSearch(engine);
     ts->SetDirection(TextSearch::Direction::Forward);
     ts->SetMatchCase(false);
+    Vec<bool> allowed;
     if (spec) {
-        Vec<bool> allowed;
         if (!ParseFindPageRange(spec, engine->PageCount(), allowed)) {
             VecReset(allowed);
         }
-        ts->SetAllowedPages(allowed);
-    } else {
-        ts->SetPageRange(first, last);
+    } else if (first > 0 || last > 0) {
+        int lo = first > 0 ? first : 1;
+        int hi = last > 0 ? last : ts->nPages;
+        if (lo > hi) {
+            std::swap(lo, hi);
+        }
+        VecResize(allowed, ts->nPages);
+        for (int page = 1; page <= ts->nPages; page++) {
+            allowed[page - 1] = page >= lo && page <= hi;
+        }
     }
+    ts->SetAllowedPages(allowed);
     int n = 0;
-    TextSel* sel = ts->FindFirst(ts->RestrictFirst(), needle);
-    while (sel && sel->len > 0) {
-        out.Append(fmt("page=%d\n", sel->pages[0]));
+    Vec<TextSel>* sel = ts->FindFirst(ts->RestrictFirst(), needle);
+    while (sel && len(*sel) > 0) {
+        out.Append(fmt("page=%d\n", (*sel)[0].pageNo));
         n++;
         sel = ts->FindNext();
     }
@@ -268,7 +276,7 @@ TempStr DestResultTemp(Str pdfPath, int destNo) {
             dest = NthDestInToc(toc->root, destNo, counter);
         }
         if (dest) {
-            out.Append(fmt("dest=%d page=%d zoom=%g\n", destNo, PageDestGetPageNo(dest), PageDestGetZoom(dest)));
+            out.Append(fmt("dest=%d page=%d zoom=%g\n", destNo, PageDestGetPageNo(dest), dest->GetZoom()));
         } else {
             out.Append(fmt("dest=%d NODEST\n", destNo));
         }
@@ -385,7 +393,7 @@ TempStr ChmResultTemp(Str chmPath, int* exitCodeOut) {
         StrVec allPaths;
         doc->GetAllPaths(&allPaths);
         out.Append(fmt("chmfile_paths=%d\n", len(allPaths)));
-        if (doc->HasToc()) {
+        if (len(doc->tocPath) > 0) {
             out.Append(StrL("chmfile_toc=YES\n"));
         }
         delete doc;
@@ -806,7 +814,7 @@ static bool FindWordGlyphRange(EngineBase* engine, int pageNo, Str word, int* st
 // ShowSearchResult(). SetLastResult()->SetText() clears textSearch->result
 // whenever the matched text differs from the typed search text (e.g. a
 // case-insensitive find where "the" matches "The"), so ShowSearchResult() then
-// got an empty result (result->len == 0), tripped a ReportIf, and failed to
+// got an empty result (len(*result) == 0), tripped a ReportIf, and failed to
 // navigate to the match. Operates on the document loaded into the first window.
 // `word` is the (case-different) matched text in the document and `typed` is
 // the lowercase search text the user typed. Since issue #5737 find no longer
@@ -902,7 +910,7 @@ TempStr GoToFindMatchResultTemp(Str word, Str typed, int* exitCodeOut) {
     // the current one - and with the find UI closed isn't highlighted at all
     // (issue #5889). SetLastResult()->SetText() drops it exactly when the
     // document text differs from what was typed, which is this test's case.
-    bool hasResult = ts->result.len > 0;
+    bool hasResult = len(ts->result) > 0;
 
     bool matchOk = (curPage == pageNo) && (curStart == startGlyph) && (curEnd == endGlyph) && str::Eq(matched, word);
     bool ok = matchOk && visible && hasResult;
@@ -955,13 +963,6 @@ static bool FindWordCenter(EngineBase* engine, int pageNo, Str word, double* xOu
     return false;
 }
 
-static TempStr ExtractSelectionTextTemp(TextSelection& ts) {
-    Str s = ts.ExtractText(StrL(" "));
-    TempStr res = str::DupTemp(s);
-    str::Free(s);
-    return res;
-}
-
 // Headless triple-click line-selection test (issue #5712). Loads the pdf, clicks
 // the middle of <clickWord>, runs the same TextSelection steps as a double-click
 // followed by a triple-click (without the mouse-up trim), and checks the result.
@@ -1000,14 +1001,14 @@ TempStr TripleClickLineSelectResultTemp(Str pdfPath, Str clickWord, Str expected
     TextSelection ts(engine);
     ts.SelectWordAt(pageNo, x, y);
     ts.SelectLineAt(pageNo, x, y);
-    TempStr selected = ExtractSelectionTextTemp(ts);
+    TempStr selected = ts.ExtractTextTemp(StrL(" "));
 
     // simulate the old mouse-up bug: re-selecting to the click point trims the line
     TextSelection trimmed(engine);
     trimmed.SelectWordAt(pageNo, x, y);
     trimmed.SelectLineAt(pageNo, x, y);
     trimmed.SelectUpTo(pageNo, x, y);
-    TempStr trimmedText = ExtractSelectionTextTemp(trimmed);
+    TempStr trimmedText = trimmed.ExtractTextTemp(StrL(" "));
     if (str::Eq(trimmedText, expectedLine)) {
         out.Append(fmt("ERROR trim-check-failed trimmed=%s\n", trimmedText));
         SafeEngineRelease(&engine);
@@ -1206,7 +1207,7 @@ TempStr RenumberSelResultTemp(int layoutChapter, int* exitCodeOut) {
         }
         dm->textSelection->StartAt(p, 0);
         dm->textSelection->SelectUpTo(p, std::min(n, 10));
-        textLenBefore = dm->textSelection->result.len;
+        textLenBefore = len(dm->textSelection->result);
         if (textLenBefore > 0) {
             break;
         }
@@ -1216,13 +1217,13 @@ TempStr RenumberSelResultTemp(int layoutChapter, int* exitCodeOut) {
 
     bool survived = tab->selectionOnPage && len(*tab->selectionOnPage) > 0;
     int pageNo = survived ? (*tab->selectionOnPage)[0].pageNo : -1;
-    bool textSurvived = textLenBefore > 0 && dm->textSelection->result.len == textLenBefore;
+    bool textSurvived = textLenBefore > 0 && len(dm->textSelection->result) == textLenBefore;
     if (survived) {
         out.Append(fmt("OK survived=1 pageNo=%d\n", pageNo));
     } else {
         out.Append(StrL("FAIL survived=0\n"));
     }
-    out.Append(fmt("textSurvived=%d textLen=%d\n", (int)textSurvived, dm->textSelection->result.len));
+    out.Append(fmt("textSurvived=%d textLen=%d\n", (int)textSurvived, len(dm->textSelection->result)));
     if (exitCodeOut) {
         *exitCodeOut = (survived && textSurvived) ? 0 : 1;
     }
@@ -1282,8 +1283,8 @@ TempStr DestZoomNavResultTemp(int destNo, int startZoomPerc, int* exitCodeOut) {
     float zoomAfter = dm->GetZoomVirtual();
 
     out.Append(fmt("OK dest=%d destZoom=%g page=%d landed=%d zoomBefore=%g zoomAfter=%g ignore=%d\n", destNo,
-                   dest ? PageDestGetZoom(dest) : 0.f, dest ? PageDestGetPageNo(dest) : 0, dm->CurrentPageNo(),
-                   zoomBefore, zoomAfter, gSettings->ignoreDestinationZoom ? 1 : 0));
+                   dest ? dest->GetZoom() : 0.f, dest ? PageDestGetPageNo(dest) : 0, dm->CurrentPageNo(), zoomBefore,
+                   zoomAfter, gSettings->ignoreDestinationZoom ? 1 : 0));
     if (exitCodeOut) {
         *exitCodeOut = 0;
     }
@@ -1326,7 +1327,7 @@ TempStr MarkdownTocNavigateResultTemp(int destNo, int minScrollY, int* exitCodeO
             return finish(fmt("NOTREADY no-dest destNo=%d", destNo), 2);
         }
         GoToTocItem(win, item);
-        return finish(fmt("NAVIGATING dest=%d name=%s", destNo, PageDestGetName(item->dest)), 0);
+        return finish(fmt("NAVIGATING dest=%d name=%s", destNo, item->dest->GetName()), 0);
     }
 
     Point pos = mm->docView->GetScrollPos();
@@ -1537,11 +1538,11 @@ TempStr PageLinksResultTemp(Str path, int pageNo, int* exitCodeOut) {
             continue;
         }
         nLinks++;
-        Str value = PageDestGetValue(dest);
+        Str value = dest->GetValue();
         TempStr valueShown = str::ReplaceTemp(value, StrL("\r\n"), StrL("|"));
         valueShown = str::ReplaceTemp(valueShown, StrL("\n"), StrL("|"));
         RectF src = el->GetRect();
-        RectF destRc = PageDestGetRect(dest);
+        RectF destRc = dest->GetRect();
         out.Append(fmt("kind=%s page=%d src=%g,%g,%g,%g dest=%g,%g,%g,%g value=%s\n", Str(dest->GetKind()),
                        PageDestGetPageNo(dest), src.x, src.y, src.dx, src.dy, destRc.x, destRc.y, destRc.dx, destRc.dy,
                        valueShown));

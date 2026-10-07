@@ -517,22 +517,6 @@ bool SumatraLaunchBrowser(Str url) {
     return LaunchFileShell(url, {}, StrL("open"));
 }
 
-bool DocIsSupportedFileType(FileType kind) {
-    if (EpubDoc::IsSupportedFileType(kind)) {
-        return true;
-    }
-    if (Fb2Doc::IsSupportedFileType(kind)) {
-        return true;
-    }
-    if (MobiDoc::IsSupportedFileType(kind)) {
-        return true;
-    }
-    if (PalmDoc::IsSupportedFileType(kind)) {
-        return true;
-    }
-    return false;
-}
-
 // lets the shell open a file of any supported perceived type
 // in the default application for opening such files
 bool OpenFileExternally(Str path) {
@@ -1390,7 +1374,7 @@ static void CreateThumbnailForFile(MainWindow* win, FileState* ds) {
         auto* model = win->AsFixed();
         if (model) {
             auto* engine = model->GetEngine();
-            bool withPwd = engine->IsPasswordProtected();
+            bool withPwd = engine->isPasswordProtected;
             Str decrKey = engine->decryptionKey;
             if (withPwd && len(decrKey) == 0) {
                 RemoveThumbnail(ds);
@@ -1934,7 +1918,7 @@ static void UpdatePageInfoHelper(DocController* ctrl, NotificationWnd* wnd, int 
                 detail = detail ? fmt("%s%s%s", detail, StrL(kPageInfoSep), sizeStr) : sizeStr;
             }
             // fileDPI defaults to 96; only show when the image reports something else
-            float dpi = engine->GetFileDPI();
+            float dpi = engine->fileDPI;
             if (dpi > 0.5f && fabsf(dpi - 96.0f) > 0.5f) {
                 TempStr dpiStr = fmt("%.0f DPI", dpi);
                 detail = detail ? fmt("%s%s%s", detail, StrL(kPageInfoSep), dpiStr) : dpiStr;
@@ -2409,8 +2393,7 @@ static DisplayMode DisplayModeForNewDocument(Str path, EngineBase* engine) {
         (path && IsEngineCbxSupportedFileType(GuessFileTypeFromName(path, true)))) {
         modeStr = gSettings->comicBookUI.defaultDisplayMode;
     } else if (k == kindEngineEpub || k == kindEngineFb2 || k == kindEngineMobi || k == kindEnginePdb ||
-               k == kindEngineHtml || k == kindEngineTxt ||
-               (path && IsEbookFileType(GuessFileTypeFromName(path, true)))) {
+               k == kindEngineHtml || (path && IsEbookFileType(GuessFileTypeFromName(path, true)))) {
         modeStr = gSettings->eBookUI.defaultDisplayMode;
     }
     if (modeStr) {
@@ -3877,9 +3860,7 @@ static void LoadDocumentMarkNotExist(MainWindow* win, Str path, bool noSavePrefs
     // display the notification ASAP (serializing settings can introduce a notable delay)
     win->RedrawAll(true);
 
-    if (!FileHistoryMarkFileInexistent(path)) {
-        return;
-    }
+    FileHistoryDemote(path);
     // TODO: handle this better. see https://github.com/sumatrapdfreader/sumatrapdf/issues/1674
     if (!noSavePrefs) {
         ScheduleSaveSettings();
@@ -5207,8 +5188,8 @@ enum class MeasurementUnit {
 static TempStr FormatCursorPositionTemp(EngineBase* engine, PointF pt, MeasurementUnit unit) {
     pt.x = std::max(pt.x, 0.0f);
     pt.y = std::max(pt.y, 0.0f);
-    pt.x /= engine->GetFileDPI();
-    pt.y /= engine->GetFileDPI();
+    pt.x /= engine->fileDPI;
+    pt.y /= engine->fileDPI;
 
     // for MeasurementUnit::in
     float factor = 1;
@@ -6386,8 +6367,6 @@ static bool AppendFileFilterForDoc(DocController* ctrl, str::Builder& fileFilter
         fileFilter.Append(Tr("FictionBook documents"));
     } else if (type == kindEnginePdb) {
         fileFilter.Append(Tr("PalmDoc documents"));
-    } else if (type == kindEngineTxt) {
-        fileFilter.Append(Tr("Text documents"));
     } else {
         fileFilter.Append(Tr("PDF documents"));
     }
@@ -7195,7 +7174,7 @@ static bool IsAtDocumentBottom(MainWindow* win);
 
 static bool IsOpenableNextPrevFile(Str path) {
     FileType kind = GuessFileTypeFromName(path, true);
-    return IsSupportedFileType(kind, true) || DocIsSupportedFileType(kind);
+    return IsSupportedFileType(kind, true);
 }
 
 // File history is UI-thread only, so snapshot paths in this dir before the
@@ -10773,7 +10752,7 @@ static bool LayoutFollowsEbookSettings(EngineBase* engine) {
     }
     Kind k = engine->kind;
     return k == kindEngineMobi || k == kindEngineFb2 || k == kindEnginePdb || k == kindEngineHtml ||
-           k == kindEngineTxt || k == kindEngineEpub;
+           k == kindEngineEpub;
 }
 
 static void ReloadEbookLayoutDocs() {
@@ -16276,7 +16255,7 @@ static void SetTabState(WindowTab* tab, TabState* state) {
 
 static void RestoreMissingTabOnStartup(MainWindow* win, TabState* state, bool deferTabUpdate) {
     logf("RestoreTabOnStartup: file not found '%s', creating placeholder tab\n", state->filePath);
-    FileHistoryMarkFileInexistent(state->filePath, true);
+    FileHistoryDemote(state->filePath, true);
     WindowTab* tab = new WindowTab(win);
     tab->SetFilePath(state->filePath);
     tab->tabState = state;
@@ -18647,17 +18626,18 @@ int APIENTRY WinMain(_In_ HINSTANCE /*hInstance*/, _In_opt_ HINSTANCE /*hPrevIns
         exitCode = RunInstaller();
         // exit immediately. for some reason exit handlers try to
         // pull in libsumatrapdf.dll which we don't have access to in the installer
+        ScheduleDeleteTempInstaller();
         ::ExitProcess(exitCode);
     }
 
     // when not a single self-contained exe, a missing sibling libsumatrapdf.dll means
     // we're really the installer; run it (matches pre-single-exe behavior)
-    if (!gSingleExe && ForceRunningAsInstaller() && !flags.dumpExif && !flags.dumpChm && !flags.engineDump &&
-        !flags.unitTests) {
+    if (!gSingleExe && ForceRunningAsInstaller() && !flags.dumpExif && !flags.dumpChm && !flags.unitTests) {
         logf("forcing running as an installer\n");
         exitCode = RunInstaller();
         // exit immediately. for some reason exit handlers try to
         // pull in libsumatrapdf.dll which we don't have access to in the installer
+        ScheduleDeleteTempInstaller();
         ::ExitProcess(exitCode);
     }
 
@@ -18723,12 +18703,6 @@ int APIENTRY WinMain(_In_ HINSTANCE /*hInstance*/, _In_opt_ HINSTANCE /*hPrevIns
         return 0;
     }
 #endif
-
-    if (flags.engineDump) {
-        void EngineDump(const Flags& flags);
-        EngineDump(flags);
-        return 0;
-    }
 
     if (flags.dumpExif) {
         gLogToConsole = false;

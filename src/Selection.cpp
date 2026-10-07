@@ -90,20 +90,15 @@ Vec<SelectionOnPage>* SelectionOnPage::FromRectangle(DisplayModel* dm, Rect rect
     return sel;
 }
 
-Vec<SelectionOnPage>* SelectionOnPage::FromTextSelect(TextSel* textSel) {
-    Vec<SelectionOnPage>* sel = new Vec<SelectionOnPage>();
-    VecGrow(*sel, textSel->len);
-
-    for (int i = textSel->len - 1; i >= 0; i--) {
-        RectF rect = ToRectF(textSel->rects[i]);
-        const QuadF* q = textSel->quads ? &textSel->quads[i] : nullptr;
-        VecAppend(*sel, SelectionOnPage(textSel->pages[i], &rect, q));
-    }
-    VecReverse(*sel);
-
-    if (len(*sel) == 0) {
-        delete sel;
+Vec<SelectionOnPage>* SelectionOnPage::FromTextSelect(Vec<TextSel>* textSel) {
+    if (len(*textSel) == 0) {
         return nullptr;
+    }
+    auto* sel = new Vec<SelectionOnPage>();
+    VecReserve(*sel, len(*textSel));
+    for (const TextSel& part : *textSel) {
+        RectF rect = ToRectF(part.rect);
+        VecAppend(*sel, SelectionOnPage(part.pageNo, &rect, &part.quad));
     }
     return sel;
 }
@@ -150,28 +145,26 @@ void RemapSelOnRenumber(MainWindow* win, DisplayModel* dm) {
     }
 }
 
-// glyph-level text selection: TextSel::pages[] holds one pageNo per selected
-// glyph/rect. Remap in place instead of dropping the whole selection; only
-// Reset() when a page no longer maps (the chapter it was on is gone)
+// Remap selection pages after a chapter layout. Drop selections whose pages disappeared.
 void RemapTextSelection(DisplayModel* dm) {
     if (!dm || !dm->textSelection) {
         return;
     }
     TextSelection* ts = dm->textSelection;
-    TextSel& result = ts->result;
-    for (int i = 0; i < result.len; i++) {
-        int newPageNo = dm->RemapPageNo(result.pages[i]);
+    Vec<TextSel>& result = ts->result;
+    for (TextSel& part : result) {
+        int newPageNo = dm->RemapPageNo(part.pageNo);
         if (newPageNo < 1) {
             ts->Reset();
             return;
         }
-        result.pages[i] = newPageNo;
+        part.pageNo = newPageNo;
     }
     ts->startPage = dm->RemapPageNo(ts->startPage);
     ts->endPage = dm->RemapPageNo(ts->endPage);
     ts->wordStartPage = dm->RemapPageNo(ts->wordStartPage);
     ts->wordEndPage = dm->RemapPageNo(ts->wordEndPage);
-    if (result.len > 0 && (ts->startPage < 1 || ts->endPage < 1)) {
+    if (len(result) > 0 && (ts->startPage < 1 || ts->endPage < 1)) {
         ts->Reset();
     }
 }
@@ -190,7 +183,7 @@ bool IsRectangularSelection(MainWindow* win) {
         return false;
     }
     // text selection has glyphs; rectangular (Ctrl+drag) does not
-    return dm->textSelection->result.len == 0;
+    return len(dm->textSelection->result) == 0;
 }
 
 Rect GetRectangularSelectionScreenRect(MainWindow* win) {
@@ -758,16 +751,13 @@ TempStr GetSelectedTextTemp(WindowTab* tab, Str lineSep, bool& isTextOnlySelecti
     if (!dm) {
         return {};
     }
-    if (dm->GetEngine()->IsImageCollection()) {
+    if (dm->GetEngine()->isImageCollection) {
         return {};
     }
 
-    isTextOnlySelectionOut = dm->textSelection->result.len > 0;
+    isTextOnlySelectionOut = len(dm->textSelection->result) > 0;
     if (isTextOnlySelectionOut) {
-        Str s = dm->textSelection->ExtractText(lineSep);
-        TempStr res = str::DupTemp(s);
-        str::Free(s);
-        return res;
+        return dm->textSelection->ExtractTextTemp(lineSep);
     }
     StrVec selections;
     for (SelectionOnPage& sel : *tab->selectionOnPage) {
@@ -912,7 +902,7 @@ void CopySelectionToClipboard(MainWindow* win) {
     DisplayModel* dm = win->AsFixed();
     TempStr selText;
     bool isTextOnlySelectionOut = false;
-    if (!gDisableDocumentRestrictions && (dm && !dm->GetEngine()->AllowsCopyingText())) {
+    if (!gDisableDocumentRestrictions && (dm && !dm->GetEngine()->allowsCopyingText)) {
         NotificationCreateArgs args;
         args.hwndParent = win->hwndCanvas;
         args.msg = Tr("Copying text was denied (copying as image only)");
@@ -1017,18 +1007,18 @@ static int LimitTextSelectionAutoscrollDx(MainWindow* win, int dx) {
     if (!dm || !dm->textSelection) {
         return dx;
     }
-    TextSel* sel = &dm->textSelection->result;
-    if (sel->len == 0 || !sel->pages || !sel->rects) {
+    Vec<TextSel>* sel = &dm->textSelection->result;
+    if (len(*sel) == 0) {
         return dx;
     }
     int selLeft = INT_MAX;
     int selRight = INT_MIN;
-    for (int i = 0; i < sel->len; i++) {
-        int pageNo = sel->pages[i];
+    for (int i = 0; i < len(*sel); i++) {
+        int pageNo = (*sel)[i].pageNo;
         if (!dm->PageVisible(pageNo)) {
             continue;
         }
-        Rect rc = dm->CvtToScreen(pageNo, ToRectF(sel->rects[i]));
+        Rect rc = dm->CvtToScreen(pageNo, ToRectF((*sel)[i].rect));
         selLeft = std::min(selLeft, rc.x);
         selRight = std::max(selRight, rc.x + rc.dx);
     }

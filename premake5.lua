@@ -898,6 +898,7 @@ workspace "SumatraPDF"
     }
 
   project "mupdf"
+    cppdialect "C++latest"
     static_intermediate_dirs()
     kind "StaticLib"
     language "C"
@@ -933,7 +934,11 @@ workspace "SumatraPDF"
 
     uses_zlib()
     includedirs {
+      "src",
       "src/mupdf",
+      "src/shared/mupdf",
+      "ext/mupdf/source/fitz",
+      "ext/jxldec",
       "ext/mupdf/include",
       "ext/mupdf/generated",
       "ext/a-jbig2dec",
@@ -959,7 +964,7 @@ workspace "SumatraPDF"
     -- / SumatraPDF-static pick them up via project references.
     links {
       "cmark-gfm", "a-mujs", "a-extract", "a-harfbuzz", "a-freetype", "a-brotli",
-      "a-lcms2", "a-openjpeg", "a-jbig2dec", "libjpeg-turbo", "a-libarchive", "a-gumbo",
+      "a-lcms2", "a-openjpeg", "a-jbig2dec", "libjpeg-turbo", "a-libarchive", "a-gumbo", "jxldec",
     }
 
     -- mupdf
@@ -984,6 +989,7 @@ workspace "SumatraPDF"
 
     -- premake has logic in vs2010_vcxproj.lua that only sets PlatformToolset
     -- if there is a c/c++ file, so we add a no-op cpp file to force This logic
+    includedirs { "src/shared" }
     files { "src/libsumatrapdf.rc", "src/libsumatrapdf.def", "src/no_op_for_premake.cpp" }
     implibname "libsumatrapdf"
     linkoptions { "/DEF:" .. rootDirWin .. "\\src\\libsumatrapdf.def", "-IGNORE:4701", "-IGNORE:4702" }
@@ -1039,7 +1045,7 @@ workspace "SumatraPDF"
     filter {}
     setup_base_pch()
 
-    filter { "files:src/PerfLog_x64.asm" }
+    filter { "files:src/shared/PerfLog_x64.asm" }
       buildmessage '%{file.relpath}'
       buildoutputs { '%{cfg.objdir}/%{file.basename}_asm.obj' }
       buildcommands {
@@ -1047,7 +1053,7 @@ workspace "SumatraPDF"
       }
     filter {}
     filter { "configurations:Profile", "platforms:x64 or x64_asan" }
-      files { "src/PerfLog_x64.asm" }
+      files { "src/shared/PerfLog_x64.asm" }
     filter {}
 
 ---- executables
@@ -1294,7 +1300,7 @@ workspace "SumatraPDF"
     gui_files()
     uia_files()
     engines_files()
-    favor_speed_files { "src/TextSearch.cpp", "src/EngineMupdf.cpp" }
+    favor_speed_files { "src/shared/TextSearch.cpp", "src/EngineMupdf.cpp" }
     sumatrapdf_files()
 
     setup_base_pch()
@@ -1397,7 +1403,7 @@ workspace "SumatraPDF"
     gui_files()
     uia_files()
     engines_files()
-    favor_speed_files { "src/TextSearch.cpp", "src/EngineMupdf.cpp" }
+    favor_speed_files { "src/shared/TextSearch.cpp", "src/EngineMupdf.cpp" }
     sumatrapdf_files()
 
     setup_base_pch()
