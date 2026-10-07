@@ -126,6 +126,10 @@ struct WindowTab {
     // canvas dimensions when the document was last visible
     Rect canvasRc;
 
+    // per-tab annotation toolbar and placement tool state
+    bool pdfAnnotationsToolbarEnabled = false;
+    int annotPlacementCmdId = 0;
+
     // state of the table of contents
     bool showToc = false;
     bool showTocPresentation = false;

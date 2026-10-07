@@ -3210,11 +3210,22 @@ static LRESULT CALLBACK MenuBarReBarWndProc(HWND hWnd, UINT uMsg, WPARAM wParam,
 }
 
 static LRESULT CALLBACK MenuBarToolbarWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass,
-                                              DWORD_PTR /*dwRefData*/) {
+                                              DWORD_PTR dwRefData) {
+    auto* win = (MainWindow*)dwRefData;
     if (WM_ERASEBKGND == uMsg) {
-        // don't erase background here; toolbar paints its own background during WM_PAINT
-        // filling here causes visible flicker (erase then paint) during window resize
+        // Paint the initial surface with the theme color; later erases stay
+        // suppressed to avoid flicker while resizing.
+        if (win && win->needsInitialMenuToolbarBackground) {
+            HdcFillRect((HDC)wParam, HwndClientRect(hWnd), ThemeControlBackgroundColor());
+        }
         return 1;
+    }
+    if (WM_PAINT == uMsg) {
+        LRESULT res = DefSubclassProc(hWnd, uMsg, wParam, lParam);
+        if (win && HwndIsVisible(hWnd)) {
+            win->needsInitialMenuToolbarBackground = false;
+        }
+        return res;
     }
     if (WM_NCDESTROY == uMsg) {
         RemoveWindowSubclass(hWnd, MenuBarToolbarWndProc, uIdSubclass);
@@ -3434,9 +3445,10 @@ void CreateMenuBarRebar(MainWindow* win) {
         exStyle |= WS_EX_LAYOUTRTL;
     }
 
+    win->needsInitialMenuToolbarBackground = true;
     win->hwndMenuToolbar = CreateWindowExW(exStyle, TOOLBARCLASSNAME, nullptr, style, 0, 0, 0, 0, win->hwndMenuReBar,
                                            (HMENU)IDC_MENUBAR, hinst, nullptr);
-    SetWindowSubclass(win->hwndMenuToolbar, MenuBarToolbarWndProc, 0, 0);
+    SetWindowSubclass(win->hwndMenuToolbar, MenuBarToolbarWndProc, 0, (DWORD_PTR)win);
     TbSetButtonStructSize(win->hwndMenuToolbar, sizeofi(TBBUTTON));
 
     if (!DarkModeIsActive()) {

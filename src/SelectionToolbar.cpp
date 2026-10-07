@@ -84,10 +84,13 @@ struct SelectionToolbar {
 // candidate buttons; per-window visibility/enabled state comes from
 // GetCommandVisibility (hidden buttons are dropped, disabled ones grayed)
 static const SelectionToolbarButton gCandidateButtons[] = {
+
     {CmdCopySelection, TrN("Copy to clipboard"), {}, Str(gIconCopy)},
     {CmdTranslateSelection, StrL("Translate"), {}, Str(gIconTranslate)},
     {CmdReadAloudSelection, StrL("Read Aloud"), {}, Str(gIconSpeak)},
     {CmdCreateAnnotHighlight, StrL("Highlight"), {}, Str(gIconAnnotHighlight)},
+    {CmdSearchSelectionWithGoogle, StrL("Search with Google"), {},
+     StrL("<svg viewBox=\"0 0 24 24\"><path fill=\"currentColor\" d=\"M21.35 12.27c0-.79-.07-1.55-.2-2.27H12v4.3h5.24a4.48 4.48 0 0 1-1.94 2.94v2.45h3.14c1.84-1.69 2.91-4.18 2.91-7.42zM12 21.9c2.63 0 4.84-.87 6.45-2.36l-3.14-2.45c-.87.58-1.98.92-3.31.92-2.55 0-4.71-1.72-5.49-4.04H3.27v2.53A9.75 9.75 0 0 0 12 21.9zM6.51 13.05A5.88 5.88 0 0 1 6.2 12c0-.36.06-.71.16-1.05V8.42H3.27A9.9 9.9 0 0 0 2.1 12c0 1.6.38 3.11 1.17 4.42l3.24-2.53zM12 5.91c1.43 0 2.71.49 3.72 1.45l2.79-2.79C16.84 3.01 14.63 2.1 12 2.1a9.75 9.75 0 0 0-8.73 5.32l3.24 2.53C7.29 7.63 9.45 5.91 12 5.91z\"/></svg>")},
     {CmdCreateAnnotUnderline, StrL("Underline"), {}, Str(gIconAnnotUnderline)},
     {CmdCreateAnnotSquiggly, StrL("Squiggly"), {}, Str(gIconAnnotSquiggly)},
     {CmdCreateAnnotStrikeOut, StrL("Strike Out"), {}, Str(gIconAnnotStrikeOut)},
@@ -390,8 +393,6 @@ static void InvokeSelectionToolbarCommand(SelectionToolbar* tb, int cmdId) {
         }
         DeleteOldSelectionInfo(win, true);
     }
-    HideSelectionToolbar(win);
-    tb->dismissed = true;
 
     if (cmdId != CmdCopySelection) {
         HwndPostCommand(win->hwndFrame, cmdId, commandPoint);
@@ -690,7 +691,8 @@ TempStr SelectionToolbarClickTemp(Str cmdName, int* exitCodeOut) {
 // nothing if the feature is disabled (Annotations.SelectionToolbar) or there
 // is no on-screen text selection in a fixed-page document.
 static void ShowSelectionToolbarNow(MainWindow* win) {
-    if (!win || !gSettings->selectionToolbar) {
+    if (!win || !gSettings->selectionToolbar || win->IsCurrentTabAbout()) {
+        HideSelectionToolbar(win);
         return;
     }
     // Do not check IsActivelySelecting here: OnSelectionStop schedules the show
@@ -760,8 +762,6 @@ void ShowSelectionToolbar(MainWindow* win, SelToolbarShow when) {
     if (win->selectionToolbarShowPending) {
         return;
     }
-    win->selectionToolbarShowPending = true;
-    SetTimer(win->hwndCanvas, kSelectionToolbarShowTimerID, kSelectionToolbarShowDelayInMs, nullptr);
 }
 
 // fired by kSelectionToolbarShowTimerID
@@ -782,7 +782,8 @@ void SelectionToolbarOnShowTimer(MainWindow* win) {
 // canvas paint routine). Hides it if the selection scrolled out of view or the
 // current tab changed; re-shows it after e.g. a repaint restored the selection.
 void UpdateSelectionToolbarPosition(MainWindow* win) {
-    if (!win) {
+    if (!win || win->IsCurrentTabAbout()) {
+        HideSelectionToolbar(win);
         return;
     }
     // Hide during drag so the bar does not chase the rubber-band selection.

@@ -33,6 +33,7 @@
 #include "SelectTextKeyboard.h"
 #include "Commands.h"
 #include "Toolbar.h"
+#include "FloatingToolbar.h"
 #include "Translations.h"
 #include "SvgIcons.h"
 
@@ -57,9 +58,9 @@ constexpr float kFileAttachmentAnnotDefaultDy = 16.f;
 
 constexpr int kInkEraserRadiusPx = 10;
 
-// 40% yellow, when Annotations.InkColor is not a color. How translucent a
+// Deep blue, when Annotations.InkColor is not a color. How translucent a
 // stroke is comes from its color's alpha.
-constexpr Color kInkDefaultColor = 0x6600ffff;
+constexpr Color kInkDefaultColor = 0xff0000ff;
 
 // Free text is placed like a stamp: a preview box the size of the annotation
 // follows the cursor and a click creates it there. MuPDF lays free text out
@@ -384,41 +385,6 @@ static bool HasPreview(AnnotPlacementKind kind) {
            kind == AnnotPlacementKind::Shape || kind == AnnotPlacementKind::Ink;
 }
 
-static Str PlacementNotification(AnnotPlacementKind kind, bool circle, int cmdId) {
-    if (OrigCommandId(cmdId) == CmdCreateAnnotRedact) {
-        return Tr("Mark content for redaction. Drag or click twice. **Esc** to cancel.");
-    }
-    switch (kind) {
-        case AnnotPlacementKind::Stamp:
-            return Tr("Place stamp annotation. **Esc** to cancel.");
-        case AnnotPlacementKind::Caret:
-            return Tr("Place caret annotation. **Esc** to cancel.");
-        case AnnotPlacementKind::FileAttachment:
-            return Tr("Place file attachment. **Esc** to cancel.");
-        case AnnotPlacementKind::Text:
-            return Tr("Place text annotation. **Esc** to cancel.");
-        case AnnotPlacementKind::FreeText:
-            return Tr("Place free text annotation. **Esc** to cancel.");
-        case AnnotPlacementKind::Line:
-            return Tr("Place line annotation. **Shift** to snap to multiples of 45 degrees. **Esc** to cancel.");
-        case AnnotPlacementKind::PolyLine:
-            return Tr(
-                "Place polyline annotation. **Double-click**, **right-click**, **Space**, or **Enter** to finish, "
-                "**Ctrl+click** to close it. **Shift** to snap to multiples of 45 degrees. **Esc** to cancel.");
-        case AnnotPlacementKind::Shape:
-            return circle
-                       ? Tr("Place circle annotation. Drag or click twice. **Shift** for a circle. **Esc** to cancel.")
-                       : Tr("Place rectangle annotation. Drag or click twice. **Shift** for a square. **Esc** to "
-                            "cancel.");
-        case AnnotPlacementKind::Ink:
-            return Tr("Draw ink annotation. Release to finish. **Esc** to cancel.");
-        case AnnotPlacementKind::Highlighter:
-            return Tr("Select text to highlight it. **Esc** or **Enter** to finish.");
-        default:
-            return {};
-    }
-}
-
 static void RestoreCanvasCursor(MainWindow* win) {
     if (win && win->hwndCanvas) {
         SendMessageW(win->hwndCanvas, WM_SETCURSOR, (WPARAM)win->hwndCanvas, MAKELPARAM(HTCLIENT, WM_MOUSEMOVE));
@@ -511,18 +477,6 @@ bool FinishInkAnnotationPlacement(MainWindow* win) {
     return FinishAnnotationPlacement(win);
 }
 
-static void OnPlacementNotifClosed(MainWindow* win, NotificationClosedEvent* ev) {
-    RemoveNotification(ev->wnd);
-    if (!win || !IsPlacingAnnotation(win)) {
-        return;
-    }
-    if (IsPlacingInkAnnotation(win) || IsPlacingPolyLineAnnotation(win)) {
-        FinishAnnotationPlacement(win);
-        return;
-    }
-    CancelAnnotationPlacement(win);
-}
-
 bool CloseAnnotationPlacementHint(MainWindow* win) {
     if (!win || !win->hwndCanvas) {
         return false;
@@ -588,20 +542,11 @@ void StartAnnotationPlacement(MainWindow* win, int cmdId) {
     HideToolbarHoverDropdown(win);
     ToolbarUpdateStateForWindow(win, false);
 
-    NotificationCreateArgs args;
-    args.hwndParent = win->hwndCanvas;
-    args.msg = PlacementNotification(kind, p.circle, cmdId);
-    args.timeoutMs = kNotifNoTimeout;
-    args.groupId = NotifGroupForKind(kind);
-    args.corner = NotifCorner::BottomBar;
-    args.warning = true;
-    args.tab = tab;
-    args.onClosed = MkFunc1(OnPlacementNotifClosed, win);
-    ShowNotification(args);
+    // Keep annotation placement modes free of the bottom notification bar.
 
     HwndSetFocus(win->hwndFrame);
     Point pt = HwndGetCursorPos(win->hwndCanvas);
-    if (HwndClientRect(win->hwndCanvas).Contains(pt)) {
+    if (HwndClientRect(win->hwndCanvas).Contains(pt) && !IsCursorOverFloatingToolbar(win)) {
         SetPlacementCursor(win);
     }
 }
@@ -1074,6 +1019,9 @@ bool AnnotationPlacementOnMouseMove(MainWindow* win, Point pt, WPARAM key) {
 
 bool AnnotationPlacementOnSetCursor(MainWindow* win) {
     if (!IsPlacingAnnotation(win) || KindOf(win) == AnnotPlacementKind::Highlighter) {
+        return false;
+    }
+    if (IsCursorOverFloatingToolbar(win)) {
         return false;
     }
     SetPlacementCursor(win);

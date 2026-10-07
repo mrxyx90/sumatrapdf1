@@ -10,7 +10,9 @@
 #include "base/File.h"
 #include "base/WinDynCalls.h" // DWM corner prefs shim for mingw-w64 < 12
 #include <dwmapi.h>
+#include <shlobj.h>
 #include "base/Win.h"
+#include "base/GdiPlusUtil.h"
 #include "gui/Dpi.h"
 #include "base/Timer.h"
 
@@ -527,6 +529,59 @@ struct CaptureCtx {
     AtomicInt captureMs; // aggregate PrintWindow/BitBlt time across items
     AtomicInt thumbMs;   // aggregate thumbnail scaling time across items
 };
+
+
+TempStr TakeScreenshotOfWindow(HWND hwnd) {
+    if (!hwnd || !IsWindow(hwnd)) {
+        return {};
+    }
+
+    int w = 0, h = 0;
+    HBITMAP hbmp = CaptureWindowBmp(hwnd, &w, &h);
+    if (!hbmp || w <= 0 || h <= 0) {
+        DeleteObject(hbmp);
+        return {};
+    }
+
+    // Floating-toolbar screenshots are saved directly to the user's Pictures
+    // folder. The existing global CmdScreenshot flow remains unchanged.
+    PWSTR picturesPath = nullptr;
+    HRESULT hr = SHGetKnownFolderPath(FOLDERID_Pictures, KF_FLAG_DEFAULT, nullptr, &picturesPath);
+    if (FAILED(hr) || !picturesPath || len(picturesPath) == 0) {
+        CoTaskMemFree(picturesPath);
+        DeleteObject(hbmp);
+        return {};
+    }
+
+    WCHAR screenshotDir[MAX_PATH];
+    int n = _snwprintf_s(screenshotDir, dimof(screenshotDir), _TRUNCATE, L"%s\\Sumatrapdf", picturesPath);
+    CoTaskMemFree(picturesPath);
+    if (n <= 0 || !CreateDirectoryW(screenshotDir, nullptr) && GetLastError() != ERROR_ALREADY_EXISTS) {
+        DeleteObject(hbmp);
+        return {};
+    }
+
+    SYSTEMTIME st{};
+    GetLocalTime(&st);
+    WCHAR filePath[MAX_PATH];
+    n = _snwprintf_s(filePath, dimof(filePath), _TRUNCATE,
+                     L"%s\\screenshot_%04u%02u%02u_%02u%02u%02u_%03u.png",
+                     screenshotDir, st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond,
+                     st.wMilliseconds);
+    if (n <= 0) {
+        DeleteObject(hbmp);
+        return {};
+    }
+
+    Gdiplus::Bitmap bitmap(hbmp, nullptr);
+    CLSID pngClsid = GetGdiPlusEncoderClsid(WStrL(L"image/png"));
+    if (bitmap.Save(filePath, &pngClsid, nullptr) != Gdiplus::Ok) {
+        DeleteObject(hbmp);
+        return {};
+    }
+    DeleteObject(hbmp);
+    return ToUtf8Temp(filePath);
+}
 
 static void CaptureOneItem(CaptureCtx* ctx, CaptureItem* item) {
     auto t = TimeGet();

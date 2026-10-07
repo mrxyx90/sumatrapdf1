@@ -201,6 +201,9 @@
     <ClInclude Include="..\src\Flags.h">
       <Filter>src</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\FloatingToolbar.h">
+      <Filter>src</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\FormFields.h">
       <Filter>src</Filter>
     </ClInclude>
@@ -289,6 +292,9 @@
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="..\src\SearchAndDDE.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\SearchPanel.h">
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="..\src\SelectTextKeyboard.h">
@@ -755,6 +761,9 @@
     <ClCompile Include="..\src\Flags.cpp">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\FloatingToolbar.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\FormFields.cpp">
       <Filter>src</Filter>
     </ClCompile>
@@ -888,6 +897,9 @@
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\src\SearchAndDDE.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\SearchPanel.cpp">
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\src\SelectTextKeyboard.cpp">

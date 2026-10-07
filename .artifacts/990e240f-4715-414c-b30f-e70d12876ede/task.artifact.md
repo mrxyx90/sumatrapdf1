@@ -1,0 +1,4 @@
+- [x] Add `gIconHome` to SvgIcons.h and SvgIcons.cpp
+- [x] Add `CB_HOME` to CaptionButtons in MainWindow.h
+- [x] Add home caption button to captionRow1 and wire up click handling in SumatraPDF.cpp
+- [x] Verify functionality

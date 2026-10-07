@@ -213,6 +213,7 @@ HWND Edit::Create(const CreateArgs& args) {
     cargs.font = args.font;
     cargs.isRtl = args.isRtl;
     cargs.style = WS_CHILD | WS_VISIBLE | WS_TABSTOP;
+    cargs.visible = args.isVisible;
     cargs.style |= args.alignRight ? ES_RIGHT : ES_LEFT;
     if (args.numbersOnly) {
         cargs.style |= ES_NUMBER;
