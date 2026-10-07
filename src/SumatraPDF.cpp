@@ -3540,6 +3540,12 @@ void ShowMainWindow(MainWindow* win, int windowState) {
         OnDpiChanged(win, nullptr, dpi, true);
     }
 
+    // Install the maximized startup region before changing the native frame.
+    // This prevents DWM from briefly presenting the default caption/frame.
+    if (!wasVisible && windowState == WIN_STATE_MAXIMIZED) {
+        PrepareStartupWindowRegion(win);
+    }
+
     if (win->tabsInTitlebar) {
         uint flags = SWP_FRAMECHANGED | SWP_NOZORDER | SWP_NOSIZE | SWP_NOMOVE;
         SetWindowPos(win->hwndFrame, nullptr, 0, 0, 0, 0, flags);
@@ -3552,9 +3558,6 @@ void ShowMainWindow(MainWindow* win, int windowState) {
     HwndEnsureOnScreen(win->hwndFrame);
 
     if (!wasVisible) {
-        if (windowState == WIN_STATE_MAXIMIZED) {
-            PrepareStartupWindowRegion(win);
-        }
         int showCmd = (WIN_STATE_MAXIMIZED == windowState) ? SW_MAXIMIZE : SW_SHOW;
         ShowWindow(win->hwndFrame, showCmd);
         if (WIN_STATE_FULLSCREEN == windowState) {
