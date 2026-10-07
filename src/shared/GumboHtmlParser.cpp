@@ -31,10 +31,6 @@ void GumboPushChildren(Vec<const GumboNode*>& stack, const GumboNode* node) {
 }
 
 static Str GumboElementTagName(const GumboNode* node) {
-    ReportIf(!node || node->type != GUMBO_NODE_ELEMENT);
-    if (!node || node->type != GUMBO_NODE_ELEMENT) {
-        return {};
-    }
     if (node->v.element.tag != GUMBO_TAG_UNKNOWN) {
         return Str(gumbo_normalized_tagname(node->v.element.tag));
     }
@@ -90,9 +86,6 @@ const GumboNode* GumboFindDescendantByTag(const GumboNode* node, Str name, HtmlN
     VecAppend(toVisit, node);
     while (len(toVisit) > 0) {
         const GumboNode* n = VecPop(toVisit);
-        if (!n) {
-            continue;
-        }
         if (GumboTagNameIs(n, name, match)) {
             return n;
         }
@@ -106,10 +99,7 @@ TempStr GumboAttributeValueTemp(const GumboNode* node, const char* name) {
         return {};
     }
     const GumboAttribute* attr = gumbo_get_attribute(&node->v.element.attributes, name);
-    if (!attr) {
-        return {};
-    }
-    return str::DupTemp(Str(attr->value));
+    return attr ? str::DupTemp(Str(attr->value)) : TempStr{};
 }
 
 TempStr GumboTextContentTemp(const GumboNode* node, GumboTextMode mode) {
@@ -140,13 +130,12 @@ static void GumboFreeWrapper(void* /*userdata*/, void* ptr) {
     free(ptr);
 }
 
+// Avoid importing Gumbo's default options across the DLL boundary.
 GumboOptions GumboMakeOptions() {
     GumboOptions opts{};
     opts.allocator = GumboMallocWrapper;
     opts.deallocator = GumboFreeWrapper;
-    opts.userdata = nullptr;
     opts.tab_stop = 8;
-    opts.stop_on_first_error = false;
     opts.max_errors = -1;
     opts.fragment_context = GUMBO_TAG_LAST;
     opts.fragment_namespace = GUMBO_NAMESPACE_HTML;
@@ -192,9 +181,6 @@ static Str ParseHtmlNumericEntity(Str str, int& rune) {
     if (off == start) {
         return {};
     }
-    if (off < str.len && str.s[off] == ';') {
-        off++;
-    }
 
     rune = ValidHtmlEntityRuneOrFallback(codepoint);
     return Str(str.s + off, str.len - off);
@@ -215,34 +201,22 @@ static Str ResolveHtmlNamedEntity(Str str, int& rune) {
     }
     rune = ValidHtmlEntityRuneOrFallback(rune);
 
-    int endOff = entLen;
-    if (endOff < str.len && str.s[endOff] == ';') {
-        endOff++;
-    }
-    return Str(str.s + endOff, str.len - endOff);
-}
-
-// return true if s consists only of whitespace
-bool IsSpaceOnly(Str s) {
-    str::TrimWs(s);
-    return len(s) == 0;
+    return Str(str.s + entLen, str.len - entLen);
 }
 
 // if "&foo;" was the entity, str points at the char after '&'
 // returns a slice starting after the entity, or empty on failure
 Str ResolveHtmlEntity(Str str, int& rune) {
     Str entEnd = ParseHtmlNumericEntity(str, rune);
-    if (!str::IsNull(entEnd)) {
-        return entEnd;
+    if (str::IsNull(entEnd)) {
+        entEnd = ResolveHtmlNamedEntity(str, rune);
     }
-
-    entEnd = ResolveHtmlNamedEntity(str, rune);
-    if (!str::IsNull(entEnd)) {
-        return entEnd;
+    if (str::IsNull(entEnd)) {
+        rune = -1;
+        return {};
     }
-
-    rune = -1;
-    return {};
+    str::TrimPrefix(entEnd, StrL(";"));
+    return entEnd;
 }
 
 // Borrow unchanged text; decoded output belongs to the requested allocator.
@@ -299,8 +273,7 @@ bool AttrInfo::ValIs(Str s) const {
 }
 
 void HtmlToken::SetTag(TokenType newType, Str tagName) {
-    type = newType;
-    s = tagName;
+    *this = {.type = newType, .s = tagName};
     int off = 0;
     while (off < len(tagName)) {
         char c = tagName.s[off];
@@ -310,18 +283,11 @@ void HtmlToken::SetTag(TokenType newType, Str tagName) {
         off++;
     }
     name = Str(tagName.s, off);
-    reparsePoint = {};
     tag = FindHtmlTag(name);
-    node = nullptr;
 }
 
 void HtmlToken::SetText(Str slice) {
-    type = Text;
-    s = slice;
-    name = {};
-    reparsePoint = slice;
-    tag = Tag_NotFound;
-    node = nullptr;
+    *this = {.s = slice, .reparsePoint = slice};
 }
 
 bool HtmlToken::NameIs(Str nameToFind, HtmlNameMatch match) const {

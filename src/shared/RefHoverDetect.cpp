@@ -15,7 +15,7 @@ bool ShouldSearchNextPage(RectF mediabox, float destY) {
     return mediabox.dy > 0.f && destY >= mediabox.dy * kLatePageStartRatio;
 }
 
-static bool IsGlyphSpace(WCHAR c) {
+bool IsGlyphSpace(WCHAR c) {
     return c == L' ' || c == L'\t' || c == L'\n' || c == L'\r';
 }
 
@@ -143,10 +143,7 @@ void NormalizeGlyphLines(const Rect* coords, Rect* out, int glyphCount) {
         int best = -1;
         int bestDist = kBaselineTolPt + 1;
         for (int L = 0; L < nLines; L++) {
-            int dist = bl - lines[L].baseline;
-            if (dist < 0) {
-                dist = -dist;
-            }
+            int dist = abs(bl - lines[L].baseline);
             if (dist < bestDist) {
                 bestDist = dist;
                 best = L;
@@ -223,7 +220,6 @@ int StripWatermarkGlyphs(WStr text, const Rect* coords, WCHAR* outText, Rect* ou
     for (int i = 0; i < n; i++) {
         WCHAR c = text.s[i];
         bool isSpace = IsGlyphSpace(c);
-        bool drop = false;
         if (canStrip && !isSpace && coords[i].dy > hgtThresh) {
             // Sparse-row test: count non-space glyphs sharing this glyph's
             // baseline (y+dy, stable across a visual line) AND of comparable
@@ -251,11 +247,8 @@ int StripWatermarkGlyphs(WStr text, const Rect* coords, WCHAR* outText, Rect* ou
                 }
             }
             if (rowGlyphs < kMinRowGlyphs) {
-                drop = true;
+                continue;
             }
-        }
-        if (drop) {
-            continue;
         }
         outText[outLen] = c;
         outCoords[outLen] = coords[i];
@@ -332,8 +325,7 @@ RectF LandscapeBox(RectF mediabox, float destX, float destY, WStr text, const Re
                 pageRightX = std::max(rx, pageRightX);
             }
             // A paragraph gap or a transition from short to full-width lines ends the caption.
-            int captionEndY = capStartY + capLineH;
-            int prevLineBottom = capStartY + capLineH - 1;
+            int prevLineBottom = capStartY + capLineH;
             bool seenShortLine = false;
             for (int lineIdx = 0; lineIdx < 3; lineIdx++) {
                 int capTop, capBot;
@@ -373,13 +365,12 @@ RectF LandscapeBox(RectF mediabox, float destX, float destY, WStr text, const Re
                         break;
                     }
                 }
-                captionEndY = lineBottomY;
                 prevLineBottom = lineBottomY;
                 if (isShort) {
                     seenShortLine = true;
                 }
             }
-            float extendedH = (float)captionEndY + kAnchorTopMarginPt - ty;
+            float extendedH = (float)prevLineBottom + kAnchorTopMarginPt - ty;
             h = std::max(extendedH, h);
         }
     }
@@ -660,7 +651,6 @@ static RectF FindColumnWrapContinuation(WStr text, const Rect* coords, RectF med
     constexpr int kMaxContinuationPt = 60;
     int capY = topY + kMaxContinuationPt;
     int boundaryY = capY;
-    bool closedBySibling = false;
     for (int i = 0; i < text.len; i++) {
         if (text.s[i] != L'[') {
             continue;
@@ -672,10 +662,7 @@ static RectF FindColumnWrapContinuation(WStr text, const Rect* coords, RectF med
         if (r.y <= topY + (topDy / 2) || r.y >= capY) {
             continue;
         }
-        if (r.y < boundaryY) {
-            boundaryY = r.y;
-            closedBySibling = true;
-        }
+        boundaryY = std::min(boundaryY, r.y);
     }
     int bMinX = INT_MAX, bMinY = INT_MAX, bMaxX = INT_MIN, bMaxY = INT_MIN;
     for (int i = 0; i < text.len; i++) {
@@ -687,7 +674,7 @@ static RectF FindColumnWrapContinuation(WStr text, const Rect* coords, RectF med
             continue;
         }
         // Without a closing sibling, a continuation must end within the cap.
-        if (!closedBySibling && r.y >= capY - topDy) {
+        if (boundaryY == capY && r.y >= capY - topDy) {
             return RectF{};
         }
         if (r.y < topY - 5 || r.y >= boundaryY) {
@@ -742,7 +729,7 @@ RectF DetectEntryBox(WStr text, const Rect* coords, RectF mediabox, float destX,
         if (r.x < columnLeft) {
             continue;
         }
-        int distY = (r.y >= dY) ? (r.y - dY) : (dY - r.y);
+        int distY = abs(r.y - dY);
         if (distY < bestDistY || (distY == bestDistY && r.x < bestX)) {
             bestDistY = distY;
             bestX = r.x;

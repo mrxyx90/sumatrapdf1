@@ -123,17 +123,18 @@ EpubFormatter::~EpubFormatter() {
     str::Free(pagePath);
 }
 
+template <typename T, typename... Args>
+static Str GetTagImage(T* doc, HtmlToken* t, Str name, HtmlNameMatch match, Args... args) {
+    AttrInfo attr = t->GetAttrByName(name, match);
+    return attr ? doc->GetImageData(url::DecodeTemp(attr.val), args...) : Str{};
+}
+
 void EpubFormatter::HandleTagImg(HtmlToken* t) {
     ReportIf(!epubDoc);
     if (t->IsEndTag()) {
         return;
     }
-    Str img;
-    AttrInfo attr = t->GetAttrByName(StrL("src"));
-    if (attr) {
-        TempStr src = url::DecodeTemp(attr.val);
-        img = epubDoc->GetImageData(src, pagePath);
-    }
+    Str img = GetTagImage(epubDoc, t, StrL("src"), HtmlNameMatch::Exact, pagePath);
     EmitImageOrAlt(t, img);
 }
 
@@ -168,15 +169,15 @@ AttrInfo GetStylesheetHref(HtmlToken* t) {
     return t->GetAttrByName(StrL("href"));
 }
 
+template <typename T, typename... Args>
+static Str ReadLinkedStyle(T* doc, HtmlToken* t, Args... args) {
+    AttrInfo attr = GetStylesheetHref(t);
+    return attr ? doc->GetFileData(url::DecodeTemp(attr.val), args...) : Str{};
+}
+
 void EpubFormatter::HandleTagLink(HtmlToken* t) {
     ReportIf(!epubDoc);
-    AttrInfo attr = GetStylesheetHref(t);
-    if (!attr) {
-        return;
-    }
-
-    TempStr src = url::DecodeTemp(attr.val);
-    Str data = epubDoc->GetFileData(src, pagePath);
+    Str data = ReadLinkedStyle(epubDoc, t, pagePath);
     if (data) {
         ParseStyleSheet(data);
         str::Free(data);
@@ -191,12 +192,7 @@ void EpubFormatter::HandleTagSvgImage(HtmlToken* t) {
     if (!VecContains(tagNesting, Tag_Svg) && Tag_Svg_Image != t->tag) {
         return;
     }
-    AttrInfo attr = t->GetAttrByName(StrL("href"), HtmlNameMatch::Local);
-    if (!attr) {
-        return;
-    }
-    TempStr src = url::DecodeTemp(attr.val);
-    Str img = epubDoc->GetImageData(src, pagePath);
+    Str img = GetTagImage(epubDoc, t, StrL("href"), HtmlNameMatch::Local, pagePath);
     if (img) {
         EmitImage(img);
     }
@@ -253,12 +249,7 @@ void Fb2Formatter::HandleTagImg(HtmlToken* t) {
     if (t->IsEndTag()) {
         return;
     }
-    Str img;
-    AttrInfo attr = t->GetAttrByName(StrL("href"), HtmlNameMatch::Local);
-    if (attr) {
-        TempStr src = url::DecodeTemp(attr.val);
-        img = fb2Doc->GetImageData(src);
-    }
+    Str img = GetTagImage(fb2Doc, t, StrL("href"), HtmlNameMatch::Local);
     if (img) {
         EmitImage(img);
     }
@@ -326,24 +317,13 @@ void HtmlFileFormatter::HandleTagImg(HtmlToken* t) {
     if (t->IsEndTag()) {
         return;
     }
-    Str img;
-    AttrInfo attr = t->GetAttrByName(StrL("src"));
-    if (attr) {
-        TempStr src = url::DecodeTemp(attr.val);
-        img = htmlDoc->GetImageData(src);
-    }
+    Str img = GetTagImage(htmlDoc, t, StrL("src"), HtmlNameMatch::Exact);
     EmitImageOrAlt(t, img);
 }
 
 void HtmlFileFormatter::HandleTagLink(HtmlToken* t) {
     ReportIf(!htmlDoc);
-    AttrInfo attr = GetStylesheetHref(t);
-    if (!attr) {
-        return;
-    }
-
-    TempStr src = url::DecodeTemp(attr.val);
-    Str data = htmlDoc->GetFileData(src);
+    Str data = ReadLinkedStyle(htmlDoc, t);
     if (data) {
         ParseStyleSheet(data);
     }

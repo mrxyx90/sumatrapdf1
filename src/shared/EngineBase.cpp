@@ -219,10 +219,6 @@ Str ExtractJsCallName(Str js) {
     const char* p = js.s;
     const char* end = js.s + len(js);
     while (p < end) {
-        SkipJsWs(p, end);
-        if (p >= end) {
-            break;
-        }
         if (!IsJsIdentStart(*p)) {
             p++;
             continue;
@@ -379,15 +375,7 @@ TocItem* TocItem::ChildAt(int n) {
 }
 
 bool TocItem::IsExpanded() {
-    // leaf items cannot be expanded
-    if (child == nullptr) {
-        return false;
-    }
-    // item is expanded when:
-    // - expanded by default, not toggled (true, false)
-    // - not expanded by default, toggled (false, true)
-    // which boils down to:
-    return isOpenDefault != isOpenToggled;
+    return child && (isOpenDefault != isOpenToggled);
 }
 
 bool TocItem::PageNumbersMatch() const {
@@ -412,10 +400,7 @@ void DestroyTocTree(TocTree* tree) {
     }
 }
 
-TocTree::TocTree(TocItem* root, Arena* arena) {
-    this->root = root;
-    this->arena = arena;
-}
+TocTree::TocTree(TocItem* root, Arena* arena) : root(root), arena(arena) {}
 
 // arena items are not heap-freed; dests still run their destructor
 TocTree::~TocTree() {
@@ -454,13 +439,11 @@ bool TocTree::IsExpanded(TreeItem ti) {
 }
 
 void TocTree::SetUserData(TreeItem ti, uintptr_t userData) {
-    ReportIf(ti < 0);
     TocItem* tocItem = (TocItem*)ti;
     tocItem->userData = userData;
 }
 
 uintptr_t TocTree::GetUserData(TreeItem ti) {
-    ReportIf(ti < 0);
     TocItem* tocItem = (TocItem*)ti;
     return tocItem->userData;
 }
@@ -473,14 +456,8 @@ void EnsureFullLayout(EngineBase* engine) {
 }
 
 RenderPageArgs::RenderPageArgs(int pageNo, float zoom, int rotation, RectF* pageRect, RenderTarget target,
-                               AbortCookie** cookie_out) {
-    this->pageNo = pageNo;
-    this->zoom = zoom;
-    this->rotation = rotation;
-    this->pageRect = pageRect;
-    this->target = target;
-    this->cookie_out = cookie_out;
-}
+                               AbortCookie** cookie_out)
+    : pageNo(pageNo), zoom(zoom), rotation(rotation), pageRect(pageRect), target(target), cookie_out(cookie_out) {}
 
 enum class TextExtractionState {
     NotExtracted,
@@ -491,6 +468,17 @@ enum class TextExtractionState {
 struct TextCacheEntry {
     PageText data;
     TextExtractionState state = TextExtractionState::NotExtracted;
+
+    // Consume text; a concurrent extraction may have filled this slot.
+    void StoreText(PageText text) {
+        if (state == TextExtractionState::Finished) {
+            FreePageText(&text);
+            return;
+        }
+        FreePageText(&data);
+        data = text;
+        state = TextExtractionState::Finished;
+    }
 };
 
 // Cache each chapter separately so later layout cannot shift cached pages.
@@ -502,18 +490,6 @@ struct ChapterTextCache {
             FreePageText(&page.data);
         }
     }
-
-    // Consume text; a concurrent extraction may have filled this slot.
-    void StoreText(int pageNo, PageText text) {
-        TextCacheEntry& page = pages[pageNo - 1];
-        if (page.state == TextExtractionState::Finished) {
-            FreePageText(&text);
-            return;
-        }
-        FreePageText(&page.data);
-        page.data = text;
-        page.state = TextExtractionState::Finished;
-    }
 };
 
 struct PageTextCache {
@@ -521,25 +497,24 @@ struct PageTextCache {
 
     ~PageTextCache() { DeleteVecMembers(chapters); }
 
-    // existing chapter cache, or nullptr if the chapter has never been touched
-    ChapterTextCache* Peek(int chapter) {
-        int idx = chapter - 1;
-        if (idx < 0 || idx >= len(chapters)) {
+    // Existing page entry, without creating or growing its chapter cache.
+    TextCacheEntry* Peek(Location loc) {
+        if (!loc.IsValid() || loc.chapter > len(chapters)) {
             return nullptr;
         }
-        return chapters[idx];
+        ChapterTextCache* ct = chapters[loc.chapter - 1];
+        return ct && loc.page <= len(ct->pages) ? &ct->pages[loc.page - 1] : nullptr;
     }
 
-    // creates the chapter's cache if needed and grows it to at least count
-    // entries; nullptr for an out-of-range chapter
-    ChapterTextCache* Ensure(int chapter, int count) {
-        if (chapter < 1) {
+    // Create or grow the chapter cache, then return the requested page entry.
+    TextCacheEntry* Ensure(Location loc, int count) {
+        if (!loc.IsValid()) {
             return nullptr;
         }
-        if (chapter > len(chapters)) {
-            VecResize(chapters, chapter);
+        if (loc.chapter > len(chapters)) {
+            VecResize(chapters, loc.chapter);
         }
-        ChapterTextCache*& ct = chapters[chapter - 1];
+        ChapterTextCache*& ct = chapters[loc.chapter - 1];
         if (!ct) {
             ct = new ChapterTextCache();
         }
@@ -547,7 +522,7 @@ struct PageTextCache {
         if (len(ct->pages) < count) {
             VecResize(ct->pages, count);
         }
-        return ct;
+        return Peek(loc);
     }
 };
 
@@ -744,16 +719,14 @@ static void ChapterLayoutThread(ChapterLayoutJob* job) {
     EngineBase* engine = job->engine;
     int id = job->job;
     delete job;
+    AutoRelease release(engine);
 
     int total = engine->ChapterCount();
-    int done = 0;
-    bool cancelled = false;
     {
         ChapterLayoutQuiet quiet;
         for (int c = 1; c <= total; c++) {
             if (!engine->LayoutJobCurrent(id)) {
-                cancelled = true;
-                break;
+                return;
             }
             if (!engine->IsChapterLaidOut(c)) {
                 // count only. publishing here shifts flat page numbers under
@@ -761,19 +734,16 @@ static void ChapterLayoutThread(ChapterLayoutJob* job) {
                 engine->WarmChapter(c);
             }
             if (!engine->LayoutJobCurrent(id)) {
-                cancelled = true;
-                break;
+                return;
             }
-            done++;
-            engine->ReportLayoutProgress(done, total, false);
+            engine->ReportLayoutProgress(c, total, false);
         }
     }
-    if (!cancelled && engine->LayoutJobCurrent(id)) {
+    if (engine->LayoutJobCurrent(id)) {
         // the UI thread publishes the counts (LayOutChapter is cheap once
         // WarmChapter has paginated) and then resyncs the page total
-        engine->ReportLayoutProgress(done, total, true);
+        engine->ReportLayoutProgress(total, total, true);
     }
-    engine->Release();
 }
 
 // the open path lays out the chapter being read first; this counts the rest
@@ -900,32 +870,29 @@ static void ExtractTextThread(TextExtractionThreadData* data) {
     AtomicIntDec(&gDangerousThreadCount);
 }
 
+Location EngineBase::TextLocation(int pageNo) {
+    ReportIf(pageNo < 1 || pageNo > pageCount);
+    if (pageNo < 1 || pageNo > pageCount) {
+        return kInvalidLocation;
+    }
+    return LocationFromPageNo(pageNo);
+}
+
 // cached per-page text. First call on a page extracts text and caches it,
 // subsequent calls return the cached copy. The returned pointers are owned
 // by EngineBase and remain valid for the lifetime of the engine.
 bool EngineBase::HasTextForPage(int pageNo) {
-    ReportIf(pageNo < 1 || pageNo > pageCount);
-    if (pageNo < 1 || pageNo > pageCount) {
-        return false;
-    }
-    Location loc = LocationFromPageNo(pageNo);
+    Location loc = TextLocation(pageNo);
     if (!loc.IsValid()) {
         return false;
     }
     ScopedMutex scope(&textCacheLock);
-    ChapterTextCache* ct = pageTextCache->Peek(loc.chapter);
-    if (!ct || loc.page > len(ct->pages)) {
-        return false;
-    }
-    return (bool)ct->pages[loc.page - 1].data.text;
+    TextCacheEntry* page = pageTextCache->Peek(loc);
+    return page && (bool)page->data.text;
 }
 
 void EngineBase::RequestTextExtraction(int pageNo) {
-    ReportIf(pageNo < 1 || pageNo > pageCount);
-    if (pageNo < 1 || pageNo > pageCount) {
-        return;
-    }
-    Location loc = LocationFromPageNo(pageNo);
+    Location loc = TextLocation(pageNo);
     if (!loc.IsValid()) {
         return;
     }
@@ -933,15 +900,11 @@ void EngineBase::RequestTextExtraction(int pageNo) {
 
     {
         ScopedMutex scope(&textCacheLock);
-        ChapterTextCache* ct = pageTextCache->Ensure(loc.chapter, count);
-        if (!ct || loc.page > len(ct->pages)) {
+        TextCacheEntry* page = pageTextCache->Ensure(loc, count);
+        if (!page || page->data.text || page->state != TextExtractionState::NotExtracted) {
             return;
         }
-        TextCacheEntry& page = ct->pages[loc.page - 1];
-        if (page.data.text || page.state != TextExtractionState::NotExtracted) {
-            return;
-        }
-        page.state = TextExtractionState::Pending;
+        page->state = TextExtractionState::Pending;
     }
 
     AddRef();
@@ -958,9 +921,9 @@ void EngineBase::RequestTextExtraction(int pageNo) {
 
     {
         ScopedMutex scope(&textCacheLock);
-        ChapterTextCache* ct = pageTextCache->Ensure(loc.chapter, count);
-        if (ct && loc.page <= len(ct->pages) && len(ct->pages[loc.page - 1].data.text) == 0) {
-            ct->pages[loc.page - 1].state = TextExtractionState::NotExtracted;
+        TextCacheEntry* page = pageTextCache->Ensure(loc, count);
+        if (page && len(page->data.text) == 0) {
+            page->state = TextExtractionState::NotExtracted;
         }
     }
     AtomicIntDec(&gDangerousThreadCount);
@@ -992,24 +955,16 @@ static Str ReturnPageText(const PageText& pt, int* lenOut, Rect** coordsOut, Qua
     if (quadsOut) {
         *quadsOut = pt.quads;
     }
-    Str text = pt.text;
-    if (text.s) {
-        // str::Builder-backed buffers reserve a NUL slot at .len
-        if (text.len >= 0) {
-            text.s[text.len] = 0;
-        }
+    // str::Builder-backed buffers reserve a NUL slot at .len
+    if (pt.text.s && len(pt.text) >= 0) {
+        pt.text.s[len(pt.text)] = 0;
     }
-    return text;
+    return pt.text;
 }
 
 bool EngineBase::ReadPageText(int pageNo, TextReadMode mode, Str& text, int* lenOut, Rect** coordsOut,
                               QuadF** quadsOut) {
-    ReportIf(pageNo < 1 || pageNo > pageCount);
-    if (pageNo < 1 || pageNo > pageCount) {
-        text = ReturnPageText({}, lenOut, coordsOut, quadsOut);
-        return true;
-    }
-    Location loc = LocationFromPageNo(pageNo);
+    Location loc = TextLocation(pageNo);
     if (!loc.IsValid()) {
         text = ReturnPageText({}, lenOut, coordsOut, quadsOut);
         return true;
@@ -1019,12 +974,11 @@ bool EngineBase::ReadPageText(int pageNo, TextReadMode mode, Str& text, int* len
     bool extract;
     {
         ScopedMutex scope(&textCacheLock);
-        ChapterTextCache* ct = pageTextCache->Ensure(loc.chapter, count);
-        TextCacheEntry& page = ct->pages[loc.page - 1];
+        TextCacheEntry* page = pageTextCache->Ensure(loc, count);
         // Finished includes textless pages. Pending still allows synchronous extraction.
-        extract = page.state != TextExtractionState::Finished;
+        extract = page->state != TextExtractionState::Finished;
         if (extract && mode == TextReadMode::Blocking) {
-            page.state = TextExtractionState::Pending;
+            page->state = TextExtractionState::Pending;
         }
     }
 
@@ -1039,13 +993,12 @@ bool EngineBase::ReadPageText(int pageNo, TextReadMode mode, Str& text, int* len
         EnsurePageText(&extracted);
 
         ScopedMutex scope(&textCacheLock);
-        ChapterTextCache* ct = pageTextCache->Ensure(loc.chapter, count);
-        ct->StoreText(loc.page, extracted);
+        pageTextCache->Ensure(loc, count)->StoreText(extracted);
     }
 
     ScopedMutex scope(&textCacheLock);
-    ChapterTextCache* ct = pageTextCache->Ensure(loc.chapter, count);
-    text = ReturnPageText(ct->pages[loc.page - 1].data, lenOut, coordsOut, quadsOut);
+    TextCacheEntry* page = pageTextCache->Ensure(loc, count);
+    text = ReturnPageText(page->data, lenOut, coordsOut, quadsOut);
     return true;
 }
 
@@ -1070,12 +1023,12 @@ void EngineBase::InvalidateTextForPage(int pageNo) {
         return;
     }
     ScopedMutex scope(&textCacheLock);
-    ChapterTextCache* ct = pageTextCache->Peek(loc.chapter);
-    if (!ct || loc.page > len(ct->pages)) {
+    TextCacheEntry* page = pageTextCache->Peek(loc);
+    if (!page) {
         return;
     }
-    FreePageText(&ct->pages[loc.page - 1].data);
-    ct->pages[loc.page - 1].state = TextExtractionState::NotExtracted;
+    FreePageText(&page->data);
+    page->state = TextExtractionState::NotExtracted;
 }
 
 // number of pages the loaded document contains. Comes from the chapter table
@@ -1129,8 +1082,7 @@ TocTree* EngineBase::GetToc() {
 
 // Append nonempty properties in standard order, preserving existing values.
 void EngineBase::GetProperties(Props& propsOut) {
-    for (int i = 0; gAllProps[i] != DocProp::None; i++) {
-        DocProp prop = gAllProps[i];
+    for (DocProp prop : kCommonDocProps) {
         // font list is loaded asynchronously in ShowProperties()
         if (prop == DocProp::FontList) {
             continue;

@@ -17,17 +17,16 @@ extern "C" {
 }
 #include "MarkdownToc.h"
 
-static bool IsMarkdownExt(Str path) {
-    return str::EndsWithI(path, StrL(".md")) || str::EndsWithI(path, StrL(".markdown"));
-}
+static constexpr SeqStrings kMarkdownExtensions = ".md\0.markdown\0";
+static constexpr SeqStrings kHtmlExtensions = ".html\0.htm\0.xhtml\0";
 
-static bool IsHtmlExt(Str path) {
-    return str::EndsWithI(path, StrL(".html")) || str::EndsWithI(path, StrL(".htm")) ||
-           str::EndsWithI(path, StrL(".xhtml"));
-}
-
-static bool IsCollectedExt(Str path, bool htmlMode) {
-    return htmlMode ? IsHtmlExt(path) : IsMarkdownExt(path);
+static Str FindFileExt(Str path, SeqStrings extensions) {
+    for (Str ext = SeqStrFirst(extensions); ext; ext = SeqStrNext(ext)) {
+        if (str::EndsWithI(path, ext)) {
+            return ext;
+        }
+    }
+    return {};
 }
 
 static void CollectMdInDir(Str dir, bool htmlMode, int depth, StrVec& out) {
@@ -36,7 +35,7 @@ static void CollectMdInDir(Str dir, bool htmlMode, int depth, StrVec& out) {
     for (DirIterEntry* de : di) {
         if (IsDirectory(de)) {
             CollectMdInDir(de->filePath, htmlMode, depth - 1, out);
-        } else if (IsRegularFile(de) && IsCollectedExt(de->name, htmlMode)) {
+        } else if (IsRegularFile(de) && FindFileExt(de->name, htmlMode ? kHtmlExtensions : kMarkdownExtensions)) {
             out.Append(de->filePath);
         }
     }
@@ -144,6 +143,19 @@ static Str ExtractHeadingTitle(cmark_node* heading) {
     return out.TakeStr();
 }
 
+template <typename F>
+static void VisitMarkdownNodes(cmark_node* doc, cmark_node_type type, F visit) {
+    cmark_iter* iter = cmark_iter_new(doc);
+    cmark_event_type ev;
+    while ((ev = cmark_iter_next(iter)) != CMARK_EVENT_DONE) {
+        cmark_node* node = cmark_iter_get_node(iter);
+        if (ev == CMARK_EVENT_ENTER && cmark_node_get_type(node) == type) {
+            visit(node);
+        }
+    }
+    cmark_iter_free(iter);
+}
+
 static void ParseMarkdownHeadings(Str data, Vec<MarkdownHeadingItem>& headingsOut) {
     VecReset(headingsOut);
     if (len(data) == 0) {
@@ -157,27 +169,13 @@ static void ParseMarkdownHeadings(Str data, Vec<MarkdownHeadingItem>& headingsOu
         return;
     }
 
-    cmark_iter* iter = cmark_iter_new(doc);
-    cmark_event_type ev;
-    while ((ev = cmark_iter_next(iter)) != CMARK_EVENT_DONE) {
-        if (ev != CMARK_EVENT_ENTER) {
-            continue;
-        }
-        cmark_node* node = cmark_iter_get_node(iter);
-        if (cmark_node_get_type(node) != CMARK_NODE_HEADING) {
-            continue;
-        }
+    VisitMarkdownNodes(doc, CMARK_NODE_HEADING, [&](cmark_node* node) {
         Str title = ExtractHeadingTitle(node);
         if (len(title) == 0) {
-            continue;
+            return;
         }
-        MarkdownHeadingItem item;
-        item.title = title;
-        item.anchor = MarkdownHeadingSlug(title);
-        item.level = cmark_node_get_heading_level(node);
-        VecAppend(headingsOut, item);
-    }
-    cmark_iter_free(iter);
+        VecAppend(headingsOut, {title, MarkdownHeadingSlug(title), cmark_node_get_heading_level(node)});
+    });
     cmark_node_free(doc);
 }
 
@@ -267,9 +265,7 @@ void ParseMarkdownTocsParallel(StrVec& files, bool htmlMode, Vec<MarkdownFileToc
     ctx.htmlMode = htmlMode;
     AtomicIntSet(&ctx.nextIdx, 0);
 
-    int numThreads = CpuCoreCount() - 2;
-    numThreads = std::max(numThreads, 1);
-    numThreads = std::min(numThreads, n);
+    int numThreads = ClampI(CpuCoreCount() - 2, 1, n);
 
     Vec<ThreadHandle> threads;
     for (int t = 0; t < numThreads; t++) {
@@ -412,41 +408,27 @@ static TempStr MarkdownLinkToHtmlTemp(Str url) {
         return {};
     }
 
-    int extLen = 0;
-    if (str::EndsWithI(path, StrL(".markdown"))) {
-        extLen = 9;
-    } else if (str::EndsWithI(path, StrL(".md"))) {
-        extLen = 3;
-    } else {
+    Str ext = FindFileExt(path, kMarkdownExtensions);
+    if (len(ext) == 0) {
         return {};
     }
 
-    Str base(path.s, len(path) - extLen);
+    Str base(path.s, len(path) - len(ext));
     Str suffix(url.s + len(path), len(url) - len(path));
     return fmt("%s.html%s", base, suffix);
 }
 
 static void RewriteMarkdownLinks(cmark_node* doc) {
-    cmark_iter* iter = cmark_iter_new(doc);
-    cmark_event_type ev;
-    while ((ev = cmark_iter_next(iter)) != CMARK_EVENT_DONE) {
-        if (ev != CMARK_EVENT_ENTER) {
-            continue;
-        }
-        cmark_node* node = cmark_iter_get_node(iter);
-        if (cmark_node_get_type(node) != CMARK_NODE_LINK) {
-            continue;
-        }
+    VisitMarkdownNodes(doc, CMARK_NODE_LINK, [](cmark_node* node) {
         const char* url = cmark_node_get_url(node);
         if (!url) {
-            continue;
+            return;
         }
         TempStr htmlUrl = MarkdownLinkToHtmlTemp(Str(url));
         if (htmlUrl) {
             cmark_node_set_url(node, CStrTemp(htmlUrl));
         }
-    }
-    cmark_iter_free(iter);
+    });
 }
 
 static bool IsSafeAnchorId(Str id) {
@@ -477,17 +459,17 @@ static bool ParseSafeAnchor(Str html, Str suffix, Str* idOut) {
     return true;
 }
 
-static cmark_node* NewSafeAnchorNode(cmark_node_type type, Str id) {
+static bool InsertSafeAnchorBefore(cmark_node* target, cmark_node_type type, Str id) {
     cmark_node* node = cmark_node_new(type);
     if (!node) {
-        return nullptr;
+        return false;
     }
     TempStr html = fmt("<a id=\"%s\"></a>", id);
-    if (!cmark_node_set_on_enter(node, CStrTemp(html))) {
+    if (!cmark_node_set_on_enter(node, CStrTemp(html)) || !cmark_node_insert_before(target, node)) {
         cmark_node_free(node);
-        return nullptr;
+        return false;
     }
-    return node;
+    return true;
 }
 
 // cmark's safe renderer drops all raw HTML. Preserve empty anchors with a
@@ -520,27 +502,19 @@ static void PreserveSafeEmptyAnchors(cmark_node* parent) {
         if (matched) {
             cmark_node_type customType =
                 type == CMARK_NODE_HTML_BLOCK ? CMARK_NODE_CUSTOM_BLOCK : CMARK_NODE_CUSTOM_INLINE;
-            cmark_node* replacement = NewSafeAnchorNode(customType, id);
-            if (replacement && cmark_node_insert_before(node, replacement)) {
-                cmark_node_unlink(node);
+            if (InsertSafeAnchorBefore(node, customType, id)) {
                 cmark_node_free(node);
                 if (close) {
-                    cmark_node_unlink(close);
                     cmark_node_free(close);
                 }
-            } else if (replacement) {
-                cmark_node_free(replacement);
             }
         }
         node = next;
     }
 }
 
-// Give every heading an "<a id="slug"></a>" so in-document links like
-// "[INTR_STATE](#intr_state)" have something to jump to (#5883). Uses the same
-// MarkdownHeadingSlug() as the ToC, so the two can't disagree, and the same
-// validated-anchor node as PreserveSafeEmptyAnchors() so cmark's safe renderer
-// keeps it.
+// Give headings anchors with the TOC's slugs so links like "#intr_state"
+// reach their headings through cmark's safe renderer (#5883).
 static void AddHeadingAnchors(cmark_node* doc) {
     for (cmark_node* node = cmark_node_first_child(doc); node; node = cmark_node_next(node)) {
         if (cmark_node_get_type(node) != CMARK_NODE_HEADING) {
@@ -552,10 +526,7 @@ static void AddHeadingAnchors(cmark_node* doc) {
         }
         Str slug = MarkdownHeadingSlug(title);
         if (slug) {
-            cmark_node* anchor = NewSafeAnchorNode(CMARK_NODE_CUSTOM_BLOCK, slug);
-            if (anchor && !cmark_node_insert_before(node, anchor)) {
-                cmark_node_free(anchor);
-            }
+            InsertSafeAnchorBefore(node, CMARK_NODE_CUSTOM_BLOCK, slug);
         }
         str::Free(slug);
         str::Free(title);

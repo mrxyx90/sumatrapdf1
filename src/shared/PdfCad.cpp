@@ -107,11 +107,8 @@ static void WithXmpData(fz_context* ctx, pdf_obj* meta, Fn consume) {
 static bool HasPdfEMarker(fz_context* ctx, pdf_document* doc) {
     pdf_obj* trailer = pdf_trailer(ctx, doc);
     pdf_obj* info = pdf_dict_get(ctx, trailer, PDF_NAME(Info));
-    if (info) {
-        pdf_obj* v = pdf_dict_gets(ctx, info, "ISO_PDFEVersion");
-        if (pdf_is_string(ctx, v)) {
-            return true;
-        }
+    if (pdf_is_string(ctx, pdf_dict_gets(ctx, info, "ISO_PDFEVersion"))) {
+        return true;
     }
 
     pdf_obj* root = pdf_dict_get(ctx, trailer, PDF_NAME(Root));
@@ -146,24 +143,14 @@ static void ScoreMetadataField(Str field, CadMetadataScore* acc) {
     }
 }
 
-static void ScoreMetadataInfoKey(fz_context* ctx, pdf_obj* info, const char* key, CadMetadataScore* acc) {
-    if (!info) {
-        return;
-    }
-    pdf_obj* val = pdf_dict_gets(ctx, info, key);
-    if (pdf_is_string(ctx, val)) {
-        ScoreMetadataField(Str(pdf_to_text_string(ctx, val)), acc);
-    }
-}
-
 // Score Creator/Producer and the XMP metadata stream against the keyword lists.
 // A blacklist hit returns a large negative score that disables detection.
 static int ScoreMetadata(fz_context* ctx, pdf_document* doc, bool* strongMatchOut) {
     CadMetadataScore acc;
     pdf_obj* trailer = pdf_trailer(ctx, doc);
     pdf_obj* info = pdf_dict_get(ctx, trailer, PDF_NAME(Info));
-    ScoreMetadataInfoKey(ctx, info, "Creator", &acc);
-    ScoreMetadataInfoKey(ctx, info, "Producer", &acc);
+    ScoreMetadataField(Str(pdf_dict_get_text_string(ctx, info, PDF_NAME(Creator))), &acc);
+    ScoreMetadataField(Str(pdf_dict_get_text_string(ctx, info, PDF_NAME(Producer))), &acc);
 
     pdf_obj* root = pdf_dict_get(ctx, trailer, PDF_NAME(Root));
     pdf_obj* meta = pdf_dict_get(ctx, root, PDF_NAME(Metadata));
@@ -282,13 +269,7 @@ static int CountOcgLayers(fz_context* ctx, pdf_document* doc) {
     pdf_obj* trailer = pdf_trailer(ctx, doc);
     pdf_obj* root = pdf_dict_get(ctx, trailer, PDF_NAME(Root));
     pdf_obj* ocp = pdf_dict_get(ctx, root, PDF_NAME(OCProperties));
-    if (!ocp) {
-        return 0;
-    }
     pdf_obj* ocgs = pdf_dict_get(ctx, ocp, PDF_NAME(OCGs));
-    if (!pdf_is_array(ctx, ocgs)) {
-        return 0;
-    }
     return pdf_array_len(ctx, ocgs);
 }
 
@@ -299,9 +280,6 @@ static int CountSquareAnnots(fz_context* ctx, pdf_document* doc, int pageCount) 
     for (int i = 0; i < pages; i++) {
         pdf_obj* pageObj = pdf_lookup_page_obj(ctx, doc, i);
         pdf_obj* annots = pdf_dict_get(ctx, pageObj, PDF_NAME(Annots));
-        if (!pdf_is_array(ctx, annots)) {
-            continue;
-        }
         int n = pdf_array_len(ctx, annots);
         for (int j = 0; j < n; j++) {
             pdf_obj* annot = pdf_array_get(ctx, annots, j);
@@ -697,15 +675,11 @@ void PdfCadEnhancePixmap(fz_context* ctx, fz_pixmap* pix, float zoom, bool raste
 }
 
 static float CadMinLineWidthForZoom(float zoom, bool hairlineDoc) {
-    float z = zoom;
-    z = std::max(z, 0.20f);
+    float z = std::max(zoom, 0.20f);
     // Device pixels. Hairline CAD needs a modest floor; avoid double-boosting with stroke rewrites.
     float minLw = hairlineDoc ? (0.50f + (0.55f / z)) : (0.14f + (0.38f / z));
     float maxLw = hairlineDoc ? 1.25f : 0.62f;
-    float minFloor = hairlineDoc ? 0.50f : 0.14f;
-    minLw = std::min(minLw, maxLw);
-    minLw = std::max(minLw, minFloor);
-    return minLw;
+    return std::min(minLw, maxLw);
 }
 
 // RAII: raise the context's minimum rendered line width for the duration of a
@@ -716,13 +690,12 @@ CadMinLineWidthScope::CadMinLineWidthScope(fz_context* ctxIn, float zoom, bool a
         return;
     }
     ctx = ctxIn;
-    active = true;
     saved = fz_graphics_min_line_width(ctx);
     fz_set_graphics_min_line_width(ctx, CadMinLineWidthForZoom(zoom, hairlineDoc));
 }
 
 CadMinLineWidthScope::~CadMinLineWidthScope() {
-    if (active && ctx) {
+    if (ctx) {
         fz_set_graphics_min_line_width(ctx, saved);
     }
 }

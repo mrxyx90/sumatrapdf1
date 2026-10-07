@@ -12,8 +12,6 @@ struct PageTextCache;
 enum class DocProp : u8;
 class EngineBase;
 
-// Location (chapter-aware page addressing) and ChapterTable live in
-// ChapterTable.h; pulled in here so every EngineBase.h consumer sees them.
 #include "ChapterTable.h"
 
 struct ILinkHandler {
@@ -123,7 +121,6 @@ struct IPageDestination : KindBase {
     // chapter-aware equivalent of pageNo; invalid until resolved
     Location loc;
 
-    IPageDestination() = default;
     virtual ~IPageDestination() = default;
 
     // rectangle of the destination on the above returned page
@@ -141,6 +138,10 @@ struct IPageDestination : KindBase {
     virtual Str GetName() { return {}; }
 };
 
+static inline bool IsLaunchLinkKind(Kind kind) {
+    return kind == kindDestinationLaunchURL || kind == kindDestinationLaunchFile;
+}
+
 // true when the destination's value is an address worth copying (a URL or a
 // file path). A link inside the document has no address; its value is the
 // description the PDF gives it, which is for showing, not for copying
@@ -148,31 +149,22 @@ static inline bool PageDestHasAddress(IPageDestination* dest) {
     if (!dest || len(dest->GetValue()) == 0) {
         return false;
     }
-    Kind k = dest->GetKind();
-    return k == kindDestinationLaunchURL || k == kindDestinationLaunchFile;
+    return IsLaunchLinkKind(dest->GetKind());
 }
 
 static inline int PageDestGetPageNo(IPageDestination* dest) {
-    if (!dest) {
-        return -1;
-    }
-    return dest->pageNo;
+    return dest ? dest->pageNo : -1;
 }
 
 // anchor point on the destination page (x, y in user-space). Returns {0,0,0,0}
 // when the destination has no specific anchor.
 static inline RectF PageDestGetDestPoint(IPageDestination* dest) {
-    if (!dest) {
-        return {};
-    }
-    return dest->GetDestPoint();
+    return dest ? dest->GetDestPoint() : RectF{};
 }
 
 struct PageDestinationURL : IPageDestination {
     Str url;
     Str displayUrl;
-
-    PageDestinationURL() = delete;
 
     PageDestinationURL(Str u) {
         ReportIf(len(u) == 0);
@@ -204,8 +196,6 @@ struct PageDestinationFile : IPageDestination {
     // also opens remote files in a new window.
     bool openInNewWindow = false;
 
-    PageDestinationFile() = delete;
-
     PageDestinationFile(Str u, Str dest) {
         ReportIf(len(u) == 0);
         kind = kindDestinationLaunchFile;
@@ -227,8 +217,6 @@ struct PageDestination : IPageDestination {
     Str value;
     Str name;
     int embedObjNum = 0; // PDF object number for embedded file attachment annotations
-
-    PageDestination() = default;
 
     ~PageDestination() override;
 
@@ -261,8 +249,7 @@ extern Kind kindPageElementImage;
 extern Kind kindPageElementComment;
 
 // an element on a page. Might be clicked, provides tooltip info for hoover
-struct IPageElement {
-    Kind kind = nullptr;
+struct IPageElement : KindBase {
     // position of the element on the page
     RectF rect;
     int pageNo = -1;
@@ -271,10 +258,7 @@ struct IPageElement {
 
     virtual ~IPageElement() = default;
 
-    // the type of this page element
     bool Is(Kind expectedKind);
-
-    Kind GetKind() { return kind; }
     // page this element lives on (-1 for elements in a ToC)
     int GetPageNo() { return pageNo; }
 
@@ -324,12 +308,7 @@ struct PageElementDestination : IPageElement {
         }
     }
 
-    Str GetValue() override {
-        if (dest) {
-            return dest->GetValue();
-        }
-        return {};
-    }
+    Str GetValue() override { return dest ? dest->GetValue() : Str{}; }
     IPageDestination* AsLink() override { return dest; }
 };
 
@@ -415,8 +394,6 @@ struct TocTree : TreeModel {
 TocTree* AllocTocTree(Arena* arena, TocItem* root);
 void DestroyTocTree(TocTree* tree);
 
-// print / dump / full-document search / PDF export / stress test: lay out
-// every chapter. No-op for a single-chapter document or a null engine
 void EnsureFullLayout(EngineBase* engine);
 
 // a helper that allows for rendering interruptions in an engine-agnostic way
@@ -524,8 +501,6 @@ class EngineBase {
     int LayoutGeneration();
     void EnsureAllChaptersLaidOut();
     int ChaptersLaidOut();
-    // lay out every chapter that isn't yet, off the UI thread. the chapter the
-    // caller already laid out (the one being read) is left as it is
     void StartBackgroundChapterLayout();
     void CancelBackgroundChapterLayout();
     bool LayoutJobCurrent(int id);
@@ -537,15 +512,10 @@ class EngineBase {
     void SetOnLayoutChanged(const Func0& fn) { onLayoutChanged = fn; }
     void SetOnChapterLayoutProgress(const Func1<ChapterLayoutProgress*>& fn) { onChapterLayoutProgress = fn; }
 
-    // real page count for a chapter; engines with more than one chapter override this
     virtual int LayOutChapter(int chapter);
-    // expensive chapter pagination without publishing a new flat page count.
-    // the background thread uses this; the UI thread publishes via LayOutChapter
     virtual void WarmChapter(int chapter);
-    // persisted position that survives re-pagination; default is "chapter:page:chapterPageCount"
     virtual TempStr MakeBookmarkTemp(Location loc);
     virtual Location LookupBookmark(Str s);
-    // resolves dest->loc (or dest->pageNo) to a Location, caching it on dest
     virtual Location ResolveDest(IPageDestination* dest);
 
     // the box containing the visible page content (usually RectF(0, 0, pageWidth, pageHeight))
@@ -598,7 +568,6 @@ class EngineBase {
     // returns the element at a given point or nullptr if there's none
     virtual IPageElement* GetElementAtPos(int pageNo, PointF pt) = 0;
 
-    // engine-owned; do not delete
     virtual IPageDestination* GetNamedDest(Str name);
 
     // 1-based page from safe PDF /OpenAction GoTo, or 0 (issue #1631)
@@ -628,13 +597,7 @@ class EngineBase {
     // bitmap regions (in device pixels of the rendered tile) whose original
     // colors should be preserved by the dark-mode bitmap recolor pass
     // (photos / artwork); default: none
-    virtual void GetBitmapRecolorSkipRects(int pageNo, float zoom, int rotation, const RectF& renderPageRect,
-                                           Size bmpSize, Vec<Rect>& skipRects) {
-        (void)pageNo;
-        (void)zoom;
-        (void)rotation;
-        (void)renderPageRect;
-        (void)bmpSize;
+    virtual void GetBitmapRecolorSkipRects(int, float, int, const RectF&, Size, Vec<Rect>& skipRects) {
         VecClear(skipRects);
     }
 
@@ -643,8 +606,6 @@ class EngineBase {
   protected:
     virtual ~EngineBase();
 
-    // engines with chapters call this after chapters.SetPageCount() to keep
-    // the flat pageCount total in sync
     void SetPageCountFromChapters();
 
     ChapterTable chapters;
@@ -667,6 +628,7 @@ class EngineBase {
         Nonblocking
     };
     bool ReadPageText(int pageNo, TextReadMode mode, Str& text, int* lenOut, Rect** coordsOut, QuadF** quadsOut);
+    Location TextLocation(int pageNo);
     void EnsureChapterTable();
 };
 

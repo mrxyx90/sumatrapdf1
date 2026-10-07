@@ -290,10 +290,6 @@ static u32 LitU32(Str d, int off) {
     return ByteReader(d).UInt32LE(off);
 }
 
-static i64 LitU64(Str d, int off) {
-    return (i64)LitU32(d, off) | ((i64)LitU32(d, off + 4) << 32);
-}
-
 // 7-bit groups, high bit set = continue; big-endian group order. Values too
 // large for an int saturate at INT_MAX (the root "/" entry stores junk that
 // overflows; its value is never used, but the bytes must be consumed)
@@ -347,21 +343,15 @@ static int LitUtf8Char(Str d, int* pos) {
 }
 
 static void LitAppendUtf8(str::Builder& out, int c) {
-    if (c < 0x80) {
-        out.AppendChar((char)c);
-    } else if (c < 0x800) {
-        out.AppendChar((char)(0xC0 | (c >> 6)));
-        out.AppendChar((char)(0x80 | (c & 0x3f)));
-    } else if (c < 0x10000) {
-        out.AppendChar((char)(0xE0 | (c >> 12)));
-        out.AppendChar((char)(0x80 | ((c >> 6) & 0x3f)));
-        out.AppendChar((char)(0x80 | (c & 0x3f)));
-    } else {
-        out.AppendChar((char)(0xF0 | (c >> 18)));
-        out.AppendChar((char)(0x80 | ((c >> 12) & 0x3f)));
-        out.AppendChar((char)(0x80 | ((c >> 6) & 0x3f)));
-        out.AppendChar((char)(0x80 | (c & 0x3f)));
+    constexpr int kMaxRuneBytes = 4;
+    char buf[kMaxRuneBytes];
+    int n = 0;
+    str::Utf8Encode(buf, n, c);
+    // LIT keeps extra prefix bits for values outside Unicode.
+    if (n == kMaxRuneBytes) {
+        buf[0] = (char)(0xF0 | (c >> 18));
     }
+    out.Append(Str(buf, n));
 }
 
 // length-prefixed utf8 string: first utf8 char is the length in characters
@@ -490,8 +480,8 @@ static bool LitParseHeader(LitFile* lit) {
     }
 
     // header piece 1 is the directory
-    i64 dirOff64 = LitU64(d, hdrLen + 16);
-    i64 dirLen64 = LitU64(d, hdrLen + 16 + 8);
+    i64 dirOff64 = (i64)ByteReader(d).UInt64LE(hdrLen + 16);
+    i64 dirLen64 = (i64)ByteReader(d).UInt64LE(hdrLen + 16 + 8);
     if (dirOff64 <= 0 || dirLen64 <= 32 || dirOff64 > len(d) || dirLen64 > len(d) - dirOff64) {
         return false;
     }
@@ -956,9 +946,6 @@ struct UnBinaryCtx {
 };
 
 static const char* LitTagName(UnBinaryCtx* ctx, int tag) {
-    if (tag < 0) {
-        return nullptr;
-    }
     // the tag tables are SeqStrings indexed by tag code; a code with no tag
     // is stored as the "\x01" sentinel (empty isn't representable mid-list)
     Str name = SeqStrByIndex(ctx->isHtml ? gLitHtmlTags : gLitOpfTags, tag);
@@ -1009,46 +996,40 @@ static TempStr LitResolveHrefTemp(UnBinaryCtx* ctx, Str href) {
         doc = Str(href.s, hash);
         frag = Str(href.s + hash, len(href) - hash);
     }
-    TempStr path = str::DupTemp(doc);
     LitManifestItem* item = ctx->lit ? LitFindManifest(ctx->lit, doc) : nullptr;
-    if (item) {
-        // make relative to ctx->dir
-        Str target = item->path;
-        Str base = ctx->dir;
-        // Strip the common directory prefix.
-        int slash = -1;
-        for (int i = 0; i < std::min(len(target), len(base)); i++) {
-            if (target.s[i] != base.s[i]) {
-                break;
-            }
-            if (target.s[i] == '/') {
-                slash = i;
-            }
+    if (!item) {
+        return len(frag) > 0 ? str::JoinTemp(doc, frag) : str::DupTemp(doc);
+    }
+
+    // make relative to ctx->dir
+    Str target = item->path;
+    Str base = ctx->dir;
+    // Strip the common directory prefix.
+    int slash = -1;
+    for (int i = 0; i < std::min(len(target), len(base)); i++) {
+        if (target.s[i] != base.s[i]) {
+            break;
         }
-        if (slash >= 0) {
-            target = Str(target.s + slash + 1, len(target) - slash - 1);
-            base = Str(base.s + slash + 1, len(base) - slash - 1);
+        if (target.s[i] == '/') {
+            slash = i;
         }
-        int nUp = 0;
-        for (int i = 0; i < len(base); i++) {
-            if (base.s[i] == '/') {
-                nUp++;
-            }
-        }
-        if (len(base) > 0) {
-            nUp++; // base is a dir path without trailing slash
-        }
-        str::Builder rel;
-        for (int i = 0; i < nUp; i++) {
+    }
+    if (slash >= 0) {
+        target = Str(target.s + slash + 1, len(target) - slash - 1);
+        base = Str(base.s + slash + 1, len(base) - slash - 1);
+    }
+    str::Builder rel;
+    for (int i = 0; i < len(base); i++) {
+        if (base.s[i] == '/') {
             rel.Append(StrL("../"));
         }
-        rel.Append(target);
-        path = ToStrTemp(rel);
     }
-    if (len(frag) > 0) {
-        path = str::JoinTemp(Str(path), frag);
+    if (len(base) > 0) {
+        rel.Append(StrL("../")); // base is a dir path without trailing slash
     }
-    return path;
+    rel.Append(target);
+    rel.Append(frag);
+    return ToStrTemp(rel);
 }
 
 // emit one output character: ASCII verbatim, everything else as a numeric
@@ -1130,12 +1111,11 @@ static bool LitBinaryToText(UnBinaryCtx* ctx, int depth) {
                     tagIsAtom = false;
                     const char* name = nullptr;
                     if (flags & kLitFlagAtom) {
-                        if (ctx->atoms && tag >= 1 && tag <= len(ctx->atoms->tags)) {
-                            name = ctx->atoms->tags.At(tag - 1).s;
-                            tagIsAtom = true;
-                        } else {
+                        if (!ctx->atoms || tag < 1 || tag > len(ctx->atoms->tags)) {
                             return false;
                         }
+                        name = ctx->atoms->tags.At(tag - 1).s;
+                        tagIsAtom = true;
                     } else {
                         name = LitTagName(ctx, tag);
                     }

@@ -272,13 +272,7 @@ bool TextSelection::IsOverGlyph(int pageNo, double x, double y) {
     };
     // when over the right half of a glyph, FindClosestGlyphAt returns the
     // index of the next glyph, in which case glyphIx must be decremented
-    if (glyphIx == textLen || !contains(glyphIx)) {
-        glyphIx--;
-    }
-    if (-1 == glyphIx) {
-        return false;
-    }
-    return contains(glyphIx);
+    return contains(glyphIx) || contains(glyphIx - 1);
 }
 
 void TextSelection::StartAt(int pageNo, int glyphIx) {
@@ -448,6 +442,23 @@ void TextSelection::SelectWordAt(int pageNo, double x, double y) {
     SelectUpTo(pageNo, wordEnd);
 }
 
+// Empty-box newlines end lines; empty-box spaces remain selectable (#5712).
+static int FindLineBoundary(Str text, Rect* coords, int pos, int textLen, int dir) {
+    auto step = dir < 0 ? Utf8CodepointPrev : Utf8CodepointNext;
+    int byteIdx = Utf8CodepointToByteIndex(text, pos);
+    while (dir < 0 ? pos > 0 : pos < textLen) {
+        int nextByte = byteIdx;
+        int c = step(text, nextByte);
+        int glyph = dir < 0 ? pos - 1 : pos;
+        if (c == '\n' && !coords[glyph].x && !coords[glyph].dx) {
+            break;
+        }
+        pos += dir;
+        byteIdx = nextByte;
+    }
+    return pos;
+}
+
 // select the whole line of text at (x, y) (triple-click; issue #694)
 void TextSelection::SelectLineAt(int pageNo, double x, double y) {
     int i = FindClosestGlyphAt(pageNo, x, y);
@@ -457,32 +468,8 @@ void TextSelection::SelectLineAt(int pageNo, double x, double y) {
     Rect* coords;
     int textLen = 0;
     Str text = engine->GetTextForPage(pageNo, &textLen, &coords);
-    // line breaks are newline glyphs with zero-size coords. Some whitespace (e.g.
-    // spaces with FZ_STEXT_ACCURATE_BBOXES) can also have empty boxes and must not
-    // be treated as line ends (issue #5712).
-    int lineStart = i;
-    int lineStartByte = Utf8CodepointToByteIndex(text, lineStart);
-    while (lineStart > 0) {
-        int prevByte = lineStartByte;
-        int c = Utf8CodepointPrev(text, prevByte);
-        int prevGlyph = lineStart - 1;
-        if (c == '\n' && !coords[prevGlyph].x && !coords[prevGlyph].dx) {
-            break;
-        }
-        lineStart--;
-        lineStartByte = prevByte;
-    }
-    int lineEnd = i;
-    int lineEndByte = Utf8CodepointToByteIndex(text, lineEnd);
-    while (lineEnd < textLen) {
-        int nextByte = lineEndByte;
-        int c = Utf8CodepointNext(text, nextByte);
-        if (c == '\n' && !coords[lineEnd].x && !coords[lineEnd].dx) {
-            break;
-        }
-        lineEnd++;
-        lineEndByte = nextByte;
-    }
+    int lineStart = FindLineBoundary(text, coords, i, textLen, -1);
+    int lineEnd = FindLineBoundary(text, coords, i, textLen, 1);
     StartAt(pageNo, lineStart);
     SelectUpTo(pageNo, lineEnd);
 }
@@ -548,13 +535,11 @@ TempStr TextSelection::ExtractTextTemp(Str lineSep) {
 }
 
 void TextSelection::GetGlyphRange(int* fromPage, int* fromGlyph, int* toPage, int* toGlyph) const {
-    *fromPage = std::min(startPage, endPage);
-    *toPage = std::max(startPage, endPage);
-    *fromGlyph = (*fromPage == endPage ? endGlyph : startGlyph);
-    *toGlyph = (*fromPage == endPage ? startGlyph : endGlyph);
-    if (*fromPage == *toPage && *fromGlyph > *toGlyph) {
-        std::swap(*fromGlyph, *toGlyph);
-    }
+    bool reverse = PosBefore(endPage, endGlyph, startPage, startGlyph);
+    *fromPage = reverse ? endPage : startPage;
+    *fromGlyph = reverse ? endGlyph : startGlyph;
+    *toPage = reverse ? startPage : endPage;
+    *toGlyph = reverse ? startGlyph : endGlyph;
 }
 
 // Cross a page boundary, landing at its first or last glyph.
@@ -644,13 +629,7 @@ static bool MoveFreeEndByLine(EngineBase* engine, int& page, int& glyph, int dir
     }
 
     // reference point: center of the glyph left of the free end (or first glyph)
-    int refIx = glyph;
-    if (refIx > 0) {
-        refIx--;
-    }
-    if (refIx >= textLen) {
-        refIx = textLen - 1;
-    }
+    int refIx = ClampI(glyph, 1, textLen) - 1;
     while (refIx > 0 && !coords[refIx].x && !coords[refIx].dx && !IsLineBreakAt(text, coords, refIx, textLen)) {
         refIx--;
     }

@@ -369,21 +369,20 @@ static bool VisitChmItem(EbookTocVisitor* visitor, const GumboNode* objNode, Chm
     return true;
 }
 
-// One suspended <ul> walk: `i` is the next child of `ul` to process at `level`.
+// One suspended <ul> walk: `i` is the next child of `ul` to process.
 struct ChmUlFrame {
     const GumboNode* ul;
-    int level;
     unsigned int i;
 };
 
 // Nested and sibling <ul>s belong to the preceding <li>, at level + 1.
-static void WalkChmUl(EbookTocVisitor* visitor, const GumboNode* ulNode, ChmItemKind kind, int level) {
+static void WalkChmUl(EbookTocVisitor* visitor, const GumboNode* ulNode, ChmItemKind kind) {
     if (!ulNode) {
         return;
     }
     // Keep traversal on the heap so deeply nested ToCs cannot overflow the stack.
     Vec<ChmUlFrame> stack;
-    VecAppend(stack, {ulNode, level, 0});
+    VecAppend(stack, {ulNode, 0});
     while (len(stack) > 0) {
         ChmUlFrame& top = VecLast(stack);
         const GumboVector* lis = &top.ul->v.element.children;
@@ -392,13 +391,13 @@ static void WalkChmUl(EbookTocVisitor* visitor, const GumboNode* ulNode, ChmItem
             continue;
         }
         const GumboNode* child = (const GumboNode*)lis->data[top.i];
-        int lvl = top.level;
+        int lvl = len(stack);
         top.i++;
         // any stack.Append() below may reallocate -> don't touch `top` after this
 
         if (GumboTagNameIs(child, StrL("ul"))) {
             // a bare <ul> among the <li>s holds the children of the preceding <li>
-            VecAppend(stack, {child, lvl + 1, 0});
+            VecAppend(stack, {child, 0});
             continue;
         }
         const GumboNode* li = child;
@@ -409,13 +408,12 @@ static void WalkChmUl(EbookTocVisitor* visitor, const GumboNode* ulNode, ChmItem
         if (!objNode) {
             continue;
         }
-        bool valid = VisitChmItem(visitor, objNode, kind, lvl);
-        if (!valid) {
+        if (!VisitChmItem(visitor, objNode, kind, lvl)) {
             continue;
         }
         const GumboNode* nested = GumboFindChildByTag(li, StrL("ul"));
         if (nested) {
-            VecAppend(stack, {nested, lvl + 1, 0});
+            VecAppend(stack, {nested, 0});
         }
     }
 }
@@ -424,7 +422,7 @@ static void WalkChmUl(EbookTocVisitor* visitor, const GumboNode* ulNode, ChmItem
 // each <li> in its own <ul>, producing a run of sibling <ul>s).
 static void WalkChmTocOrIndex(EbookTocVisitor* visitor, const GumboNode* firstUl, ChmItemKind kind) {
     if (!firstUl || !firstUl->parent) {
-        WalkChmUl(visitor, firstUl, kind, 1);
+        WalkChmUl(visitor, firstUl, kind);
         return;
     }
     const GumboNode* parent = firstUl->parent;
@@ -432,10 +430,10 @@ static void WalkChmTocOrIndex(EbookTocVisitor* visitor, const GumboNode* firstUl
         (parent->type == GUMBO_NODE_ELEMENT) ? &parent->v.element.children : &parent->v.document.children;
     for (size_t s = firstUl->index_within_parent; s < siblings->length; s++) {
         const GumboNode* sib = (const GumboNode*)siblings->data[s];
-        if (sib->type != GUMBO_NODE_ELEMENT || !GumboTagNameIs(sib, StrL("ul"))) {
+        if (!GumboTagNameIs(sib, StrL("ul"))) {
             break;
         }
-        WalkChmUl(visitor, sib, kind, 1);
+        WalkChmUl(visitor, sib, kind);
     }
 }
 
@@ -451,7 +449,7 @@ static bool WalkBrokenChmTocOrIndex(EbookTocVisitor* visitor, const GumboNode* r
         if (!node) {
             continue;
         }
-        if (node->type == GUMBO_NODE_ELEMENT && GumboTagNameIs(node, StrL("object"))) {
+        if (GumboTagNameIs(node, StrL("object"))) {
             const GumboAttribute* type = gumbo_get_attribute(&node->v.element.attributes, "type");
             if (type && str::EqI(Str(type->value), StrL("text/sitemap"))) {
                 hadOne |= VisitChmItem(visitor, node, kind, 1);

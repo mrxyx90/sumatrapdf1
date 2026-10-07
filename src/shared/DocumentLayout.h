@@ -60,12 +60,8 @@ struct DocumentLayout {
 
     void Reset(int pageCount);
     bool ValidPageNo(int pageNo) const;
-    void SetPageMediaBox(int pageNo, RectF mediaBox);
     DocumentLayoutPage* GetPage(int pageNo);
     const DocumentLayoutPage* GetPage(int pageNo) const;
     void Relayout(const DocumentLayoutParams& params);
     void RecalcVisibleParts();
-    int CurrentPageNo() const;
-    int PageNoAtViewPortTop() const;
-    int FirstVisiblePageNo() const;
 };

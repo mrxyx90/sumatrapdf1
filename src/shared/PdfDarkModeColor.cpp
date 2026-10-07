@@ -22,14 +22,10 @@ DocumentColorsFollowTheme DocumentColorsFollowThemeFromString(Str v) {
     return DocumentColorsFollowTheme::Off;
 }
 
-static const char* DocumentColorsFollowThemeToString(DocumentColorsFollowTheme mode) {
-    if (mode == DocumentColorsFollowTheme::Smart) {
-        return "smart";
-    }
-    if (mode == DocumentColorsFollowTheme::Legacy) {
-        return "legacy";
-    }
-    return "off";
+static Str DocumentColorModeName(DocumentColorsFollowTheme mode) {
+    return mode == DocumentColorsFollowTheme::Smart    ? StrL("smart")
+           : mode == DocumentColorsFollowTheme::Legacy ? StrL("legacy")
+                                                       : StrL("off");
 }
 
 // PDF dark mode runtime options (not stored in settings file)
@@ -74,10 +70,8 @@ DocumentColorsFollowTheme GetDocumentColorsFollowTheme() {
     if (gDocumentColorsFollowThemePreview >= 0) {
         return (DocumentColorsFollowTheme)gDocumentColorsFollowThemePreview;
     }
-    if (!gSettings || len(gSettings->documentColorsFollowTheme) == 0) {
-        return DocumentColorsFollowTheme::Off;
-    }
-    return DocumentColorsFollowThemeFromString(gSettings->documentColorsFollowTheme);
+    return gSettings ? DocumentColorsFollowThemeFromString(gSettings->documentColorsFollowTheme)
+                     : DocumentColorsFollowTheme::Off;
 }
 
 // Render pages as if the setting had this value, without touching gSettings,
@@ -95,13 +89,10 @@ void ClearDocumentColorsFollowThemePreview() {
 }
 
 void SetDocumentColorsFollowTheme(DocumentColorsFollowTheme mode) {
-    if (mode < DocumentColorsFollowTheme::Off || mode > DocumentColorsFollowTheme::Legacy) {
-        mode = DocumentColorsFollowTheme::Off;
-    }
     if (!gSettings) {
         return;
     }
-    Str name(DocumentColorsFollowThemeToString(mode));
+    Str name = DocumentColorModeName(mode);
     if (!str::EqI(gSettings->documentColorsFollowTheme, name)) {
         str::ReplaceWithCopy(&gSettings->documentColorsFollowTheme, name);
     }

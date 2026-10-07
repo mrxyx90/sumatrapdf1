@@ -243,12 +243,8 @@ EngineDjvuDec::EngineDjvuDec() {
 EngineDjvuDec::~EngineDjvuDec() {
     DestroyTocTree(tocTree);
     DeleteVecMembers(pages);
-    if (doc) {
-        djvu_doc_close(doc);
-    }
-    if (ctx) {
-        djvu_ctx_free(ctx);
-    }
+    djvu_doc_close(doc);
+    djvu_ctx_free(ctx);
     file::MemoryUnmap(&fileMap);
     str::Free(fileData);
 }
@@ -676,16 +672,12 @@ static void CollectZonesUtf8(djvu_text_zone* z, float dpiF, str::Builder& sb, Ve
 
 PageText EngineDjvuDec::ExtractPageText(int pageNo) {
     djvu_page_text_zones* z = djvu_page_text_get_zones(doc, pageNo - 1);
+    AutoCall freeZones(djvu_text_zones_destroy, ctx, z);
     if (!z || !z->root) {
-        if (z) {
-            djvu_text_zones_destroy(ctx, z);
-        }
         return {};
     }
     float dpiF = fileDPI / (float)pages[pageNo - 1]->dpi;
-    PageText res = DjvuZonesToPageText(z->root, dpiF);
-    djvu_text_zones_destroy(ctx, z);
-    return res;
+    return DjvuZonesToPageText(z->root, dpiF);
 }
 
 // zone text is cut out of the page text by byte offsets, so a multi-byte
@@ -825,7 +817,8 @@ TocItem* EngineDjvuDec::BuildTocTree(TocItem* parent, djvu_outline_item* items, 
     if (depth >= 64) {
         return nullptr;
     }
-    TocItem* node = nullptr;
+    TocItem* root = nullptr;
+    TocItem** next = &root;
     for (int i = 0; i < n; i++) {
         djvu_outline_item& it = items[i];
         Str title = Str(it.title);
@@ -840,13 +833,10 @@ TocItem* EngineDjvuDec::BuildTocTree(TocItem* parent, djvu_outline_item* items, 
         TocItem* tocItem = NewDjvuDecTocItem(arena, parent, title, link);
         tocItem->id = ++idCounter;
         tocItem->child = BuildTocTree(tocItem, it.children, it.nchildren, idCounter, depth + 1);
-        if (!node) {
-            node = tocItem;
-        } else {
-            node->AddSiblingAtEnd(tocItem);
-        }
+        *next = tocItem;
+        next = &tocItem->next;
     }
-    return node;
+    return root;
 }
 
 TocTree* EngineDjvuDec::GetToc() {
@@ -881,25 +871,19 @@ void EngineDjvuDec::NotePageCacheAfterRender(int page0) {
     // via the decoder callbacks — never hold djvuCacheLock here.
     {
         ScopedMutex scope(&cacheLock);
-        for (int i = 0; i < len(pageCacheLru); i++) {
-            if (pageCacheLru[i] == page0) {
-                VecRemoveAt(pageCacheLru, i);
-                break;
-            }
-        }
+        VecRemove(pageCacheLru, page0);
         VecInsertAt(pageCacheLru, 0, page0);
     }
 
     for (;;) {
-        size_t total = 0;
-        int n = 0;
         int dropPage = -1;
         {
             ScopedMutex scope(&cacheLock);
-            n = len(pageCacheLru);
+            int n = len(pageCacheLru);
             if (n <= 1) {
                 return;
             }
+            size_t total = 0;
             for (int i = 0; i < n; i++) {
                 total += djvu_doc_page_cache_size(doc, pageCacheLru[i]);
             }
@@ -911,7 +895,7 @@ void EngineDjvuDec::NotePageCacheAfterRender(int page0) {
             if (dropPage == page0) {
                 return;
             }
-            VecRemoveAt(pageCacheLru, n - 1);
+            VecRemoveLast(pageCacheLru);
         }
         djvu_doc_drop_page_cache(doc, dropPage);
     }

@@ -78,9 +78,6 @@ static void SampleImageBorder(fz_context* ctx, fz_pixmap* pix, ImageStats* stats
         sampleAt(0, y);
         sampleAt(pix->w - 1, y);
     }
-    if (n <= 0) {
-        return;
-    }
 
     float mr = 0.f, mg = 0.f, mb = 0.f;
     for (int i = 0; i < n; i++) {
@@ -160,9 +157,6 @@ static ImageStats SampleImageStats(fz_context* ctx, fz_image* image) {
                 }
                 n++;
             }
-        }
-        if (n <= 0) {
-            fz_throw(ctx, FZ_ERROR_GENERIC, "no image samples");
         }
 
         int significantBuckets = 0;
@@ -269,28 +263,6 @@ bool PdfDarkModeImageLooksLikeDarkArtwork(fz_context* ctx, fz_image* image, floa
     return LooksLikeDarkArtwork(SampleImageStats(ctx, image), pageCoverage);
 }
 
-static bool ImageIsArtwork(fz_context* ctx, fz_image* image, float pageCoverage) {
-    ImageStats stats = SampleImageStats(ctx, image);
-    if (LooksLikeLayoutBackground(stats)) {
-        return false;
-    }
-    // artwork on a flat light backdrop: recolor so the backdrop follows the page
-    // instead of staying a bright block on it (#6088)
-    if (LooksLikeLightBackdrop(stats)) {
-        return false;
-    }
-    if (LooksLikeDarkArtwork(stats, pageCoverage)) {
-        return true;
-    }
-    if (LooksLikePhoto(stats)) {
-        if (pageCoverage < 0.14f && LooksLikePaperTextBox(stats)) {
-            return false;
-        }
-        return true;
-    }
-    return false;
-}
-
 // A page-sized image is normally a scan or a full-bleed background, and those
 // should recolor along with the page. Artwork shouldn't: keeping pictures as
 // they are is what smart mode is for, and a cover illustration is no less a
@@ -306,14 +278,20 @@ bool PdfDarkModePageDominantImageRecolors(fz_context* ctx, fz_image* image, floa
 // Gate for Legacy skip-rect preserve: combines bbox size, pixel stats, and artwork heuristics.
 bool PdfDarkModeShouldPreserveEmbeddedImageRect(fz_context* ctx, fz_image* image, float pageCoverage, int devW,
                                                 int devH) {
-    if (PdfDarkModePageDominantImageRecolors(ctx, image, pageCoverage)) {
+    if (devW < kPreservePdfImagesMinSize || devH < kPreservePdfImagesMinSize) {
         return false;
     }
-    int minPx = kPreservePdfImagesMinSize;
-    if (devW < minPx || devH < minPx) {
+
+    ImageStats stats = SampleImageStats(ctx, image);
+    // Recolor artwork's light backdrop along with the page (#6088).
+    if (LooksLikeLayoutBackground(stats) || LooksLikeLightBackdrop(stats)) {
         return false;
     }
-    return ImageIsArtwork(ctx, image, pageCoverage);
+    if (LooksLikeDarkArtwork(stats, pageCoverage)) {
+        return true;
+    }
+    return pageCoverage < kMaxPreserveImagePageCoverage && LooksLikePhoto(stats) &&
+           !(pageCoverage < 0.14f && LooksLikePaperTextBox(stats));
 }
 
 #if IS_DEBUG

@@ -1,9 +1,7 @@
 /* Copyright 2022 the SumatraPDF project authors (see AUTHORS file).
    License: GPLv3 */
 
-// MakeLzSA creates LzSA archives as described in utils/LzmaSimpleArchive.cpp
-// Such archives use LZMA compression with an x86 bytecode filter which produces
-// best results for installer payloads. See ../makefile.msvc for a use case.
+// Pack files into the format defined in base/LzmaSimpleArchive.cpp.
 
 #include "base/Base.h"
 #include "base/ByteReaderWriter.h"
@@ -23,8 +21,6 @@ constexpr int kLzmaHeaderSize = 1 + LZMA_PROPS_SIZE;
 static bool Compress(const char* uncompressed, size_t uncompressedSize, char* compressed, size_t* compressedSize) {
     ReportIf(*compressedSize < uncompressedSize + 1);
     if (*compressedSize < uncompressedSize + 1) return false;
-
-    size_t lzma_size = (size_t)-1;
 
     if (*compressedSize >= kLzmaHeaderSize) {
         ISzAlloc lzmaAlloc{[](void*, size_t size) { return malloc(size); }, [](void*, void* ptr) { free(ptr); }};
@@ -47,17 +43,15 @@ static bool Compress(const char* uncompressed, size_t uncompressedSize, char* co
             LzmaEncode((Byte*)compressed + kLzmaHeaderSize, &outSize, bcj_enc ? bcj_enc : (const Byte*)uncompressed,
                        uncompressedSize, &props, (Byte*)compressed + 1, &propsSize, true /* add EOS marker */, nullptr,
                        &lzmaAlloc, &lzmaAlloc);
-        if (SZ_OK == res && propsSize == LZMA_PROPS_SIZE) lzma_size = outSize + kLzmaHeaderSize;
+        if (SZ_OK == res && propsSize == LZMA_PROPS_SIZE && outSize + kLzmaHeaderSize <= uncompressedSize) {
+            *compressedSize = outSize + kLzmaHeaderSize;
+            return true;
+        }
     }
 
-    if (lzma_size <= uncompressedSize) {
-        *compressedSize = lzma_size;
-    } else {
-        compressed[0] = (char)(u8)-1;
-        memcpy(compressed + 1, uncompressed, uncompressedSize);
-        *compressedSize = uncompressedSize + 1;
-    }
-
+    compressed[0] = (char)(u8)-1;
+    memcpy(compressed + 1, uncompressed, uncompressedSize);
+    *compressedSize = uncompressedSize + 1;
     return true;
 }
 

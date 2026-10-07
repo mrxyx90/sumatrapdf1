@@ -66,19 +66,16 @@ DrawInstr DrawInstr::PageMarkerAnchor(::Str s, RectF bbox) {
 
 // parses size in the form "1em", "3pt" or "15px"
 void ParseSizeWithUnit(Str s, float* size, StyleRule::Unit* unit) {
-    if (!str::IsNull(str::Parse(s, "%fem", size))) {
-        *unit = StyleRule::em;
-    } else if (!str::IsNull(str::Parse(s, "%fin", size))) {
-        *unit = StyleRule::pt;
+    Str suffix = str::Parse(s, "%f", size);
+    if (str::StartsWith(suffix, StrL("in"))) {
         constexpr float kPointsPerInch = 72;
         *size *= kPointsPerInch;
-    } else if (!str::IsNull(str::Parse(s, "%fpt", size))) {
-        *unit = StyleRule::pt;
-    } else if (!str::IsNull(str::Parse(s, "%fpx", size))) {
-        *unit = StyleRule::px;
-    } else {
-        *unit = StyleRule::inherit;
+        suffix = StrL("pt");
     }
+    *unit = str::StartsWith(suffix, StrL("em"))   ? StyleRule::em
+            : str::StartsWith(suffix, StrL("pt")) ? StyleRule::pt
+            : str::StartsWith(suffix, StrL("px")) ? StyleRule::px
+                                                  : StyleRule::inherit;
 }
 
 StyleRule StyleRule::Parse(CssPullParser* parser) {
@@ -129,7 +126,6 @@ HtmlFormatter::HtmlFormatter(HtmlFormatterArgs* args)
     DrawStyle style;
     style.font = GetPlatformFont(defaultFontName, defaultFontSize, PlatformFontStyle::Regular);
     style.align = AlignAttr::Justify;
-    style.dirRtl = false;
     VecAppend(styleStack, style);
     nextPageStyle = VecLast(styleStack);
 
@@ -184,20 +180,18 @@ HtmlFormatter::MeasureCache* HtmlFormatter::GetMeasureCacheForCurrFont() {
 
 // measuring text is expensive and text runs (mostly words) repeat a lot
 // within a document, so cache the measured size per font, keyed by text.
-// The caller must have called textMeasure->SetFont(CurrFont()) already.
 RectF HtmlFormatter::MeasureTextCached(Str s) {
+    textMeasure->SetFont(CurrFont());
     MeasureCache* mc = GetMeasureCacheForCurrFont();
-    if (!mc) {
-        return textMeasure->Measure(s);
-    }
     // MapStrToInt keys are utf-8, which is what we measure, so s is the key
-    int existingIdx = 0;
-    int idx = len(mc->vals);
-    if (!mc->keys->Insert(s, idx, &existingIdx)) {
-        return mc->vals[existingIdx];
+    int idx = 0;
+    if (mc && !mc->keys->Insert(s, len(mc->vals), &idx)) {
+        return mc->vals[idx];
     }
     RectF bbox = textMeasure->Measure(s);
-    VecAppend(mc->vals, bbox);
+    if (mc) {
+        VecAppend(mc->vals, bbox);
+    }
     return bbox;
 }
 
@@ -231,17 +225,11 @@ void HtmlFormatter::SetFontBasedOn(PlatformFont* font, PlatformFontStyle fs, flo
     SetFont(fontName, fs, fontSize);
 }
 
-bool ValidStyleForChangeFontStyle(PlatformFontStyle fs) {
-    return (PlatformFontStyle::Bold == fs) || (PlatformFontStyle::Italic == fs) ||
-           (PlatformFontStyle::Underline == fs) || (PlatformFontStyle::Strikeout == fs);
-}
-
 // change the current font by adding (if addStyle is true) or removing
 // a given font style from current font style
 // TODO: it doesn't corrctly support the case where a style is wrongly nested
 // like "<b>fo<i>oo</b>bar</i>" - "bar" should be italic but will be bold
 void HtmlFormatter::ChangeFontStyle(PlatformFontStyle fs, bool addStyle) {
-    ReportIf(!ValidStyleForChangeFontStyle(fs));
     if (addStyle) {
         SetFontBasedOn(CurrFont(), fs | CurrFont()->GetStyle());
     } else {
@@ -711,7 +699,7 @@ void HtmlFormatter::EmitTextRun(Str s) {
     Str run = s;
     currReparseIdx = htmlParser->PosOf(run);
     ReportIf(!ValidReparseIdx(currReparseIdx, htmlParser));
-    ReportIf(IsSpaceOnly(run) && !preFormatted);
+    ReportIf(str::IsEmptyOrWhiteSpace(run) && !preFormatted);
     ::Str tmp = ResolveHtmlEntities(s, textAllocator);
     bool resolved = tmp.s != s.s;
     if (resolved) {
@@ -729,7 +717,6 @@ void HtmlFormatter::EmitTextRun(Str s) {
         if (len(buf) == 0) {
             break;
         }
-        textMeasure->SetFont(CurrFont());
         RectF bbox = MeasureTextCached(buf);
         if (bbox.dx <= pageDx - currX) {
             AppendInstr(DrawInstr::Text(run, bbox, dirRtl));
@@ -763,7 +750,6 @@ void HtmlFormatter::EmitTextRun(Str s) {
         if (lenThatFits < len(buf)) {
             lenThatFits = Utf8CodepointStartByte(buf, lenThatFits);
         }
-        textMeasure->SetFont(CurrFont());
         bbox = MeasureTextCached(Str(buf.s, lenThatFits));
         ReportIf(bbox.dx > pageDx);
         // buf is `run` with the soft hyphens removed, so a length in buf maps
@@ -784,7 +770,6 @@ void HtmlFormatter::EmitTextMarker(Str s) {
     if (len(s) == 0) {
         return;
     }
-    textMeasure->SetFont(CurrFont());
     RectF bbox = MeasureTextCached(s);
     AppendInstr(DrawInstr::Text(s, bbox, dirRtl));
     currX += bbox.dx;
@@ -832,15 +817,8 @@ void HtmlFormatter::HandleTagBr() {
 }
 
 static AlignAttr GetAlignAttr(HtmlToken* t, AlignAttr defVal) {
-    AttrInfo attr = t->GetAttrByName(StrL("align"));
-    if (!attr) {
-        return defVal;
-    }
-    AlignAttr align = FindAlignAttr(attr.val);
-    if (AlignAttr::NotFound == align) {
-        return defVal;
-    }
-    return align;
+    AlignAttr align = FindAlignAttr(t->GetAttrByName(StrL("align")).val);
+    return align == AlignAttr::NotFound ? defVal : align;
 }
 
 void HtmlFormatter::HandleTagP(HtmlToken* t, bool isDiv) {
@@ -1034,16 +1012,16 @@ void HtmlFormatter::HandleTagStyle(HtmlToken* t) {
         return;
     }
 
-    Str start = Str(t->s.s + t->s.len + 1, 0);
-    while (t && (!t->IsEndTag() || t->tag != Tag_Style)) {
+    const char* start = t->s.s + len(t->s) + 1;
+    do {
         t = htmlParser->Next();
-    }
-    if (!t || !t->IsEndTag() || Tag_Style != t->tag) {
+    } while (t && (!t->IsEndTag() || t->tag != Tag_Style));
+    if (!t) {
         return;
     }
-    Str end = Str(t->s.s - 2, 0);
-    ReportIf(start.s > end.s);
-    ParseStyleSheet(Str(start.s, (int)(end.s - start.s)));
+    const char* end = t->s.s - 2;
+    ReportIf(start > end);
+    ParseStyleSheet(Str(start, (int)(end - start)));
     UpdateTagNesting(t);
 }
 
@@ -1083,9 +1061,7 @@ static bool AutoCloseOnOpen(HtmlTag curr, HtmlTag prev) {
 
 void HtmlFormatter::AutoCloseTags(size_t count) {
     keepTagNesting = true; // prevent recursion
-    HtmlToken tok{};
-    tok.type = HtmlToken::EndTag;
-    tok.s = {};
+    HtmlToken tok{.type = HtmlToken::EndTag};
     // let HandleHtmlTag clean up (in reverse order)
     for (size_t i = 0; i < count; i++) {
         tok.tag = VecPop(tagNesting);
@@ -1103,7 +1079,7 @@ void HtmlFormatter::UpdateTagNesting(HtmlToken* t) {
     int idx = len(tagNesting);
     bool isInline = IsInlineTag(t->tag);
     if (t->IsStartTag()) {
-        if (IsInlineTag(t->tag)) {
+        if (isInline) {
             VecAppend(tagNesting, t->tag);
             return;
         }
@@ -1242,17 +1218,15 @@ void HtmlFormatter::HandleText(Str curr) {
         // don't collapse whitespace and respect text newlines
         while (curr) {
             currReparseIdx = htmlParser->PosOf(curr);
-            Str text, rest;
-            bool newline = str::CutChar(curr, '\n', &text, &rest);
+            Str text;
+            bool newline = str::CutChar(curr, '\n', &text, &curr);
             if (newline) {
                 str::TrimSuffix(text, StrL("\r"));
             }
             EmitTextRun(text);
-            if (!newline) {
-                break;
+            if (newline) {
+                HandleTagBr();
             }
-            curr = rest;
-            HandleTagBr();
         }
         return;
     }
@@ -1471,7 +1445,9 @@ static Pixmap* PixmapForHtml(Pixmap* src) {
 #endif
 
 #if OS_LINUX
-static void CairoSetColor(cairo_t* cairo, Color col) {
+using HtmlDrawContext = cairo_t*;
+
+static void HtmlSetColor(cairo_t* cairo, Color col) {
     u8 r = 0;
     u8 g = 0;
     u8 b = 0;
@@ -1479,7 +1455,7 @@ static void CairoSetColor(cairo_t* cairo, Color col) {
     cairo_set_source_rgb(cairo, r / 255.0, g / 255.0, b / 255.0);
 }
 
-static void CairoDrawImage(cairo_t* cairo, Str data, RectF bbox) {
+static void HtmlDrawImage(cairo_t* cairo, Str data, RectF bbox) {
     Pixmap* decoded = PixmapFromData(data);
     Pixmap* pixmap = PixmapForHtml(decoded);
     FreePixmap(decoded);
@@ -1501,38 +1477,12 @@ static void CairoDrawImage(cairo_t* cairo, Str data, RectF bbox) {
     FreePixmap(pixmap);
 }
 
-void DrawHtmlPage(cairo_t* cairo, PlatformTextRender* textDraw, Vec<DrawInstr>* drawInstructions, float offX,
-                  float offY, bool showBbox, Color textColor, bool* abortCookie) {
-    DrawHtmlText(textDraw, drawInstructions, offX, offY, textColor, abortCookie);
-
-    for (DrawInstr& i : *drawInstructions) {
-        RectF bbox = i.bbox;
-        bbox.Offset(offX, offY);
-        if (DrawInstrType::Line == i.type || DrawInstrType::LinkStart == i.type) {
-            bool rule = DrawInstrType::Line == i.type;
-            float y = floorf(bbox.y + (rule ? bbox.dy / 2.f : bbox.dy) + 0.5f);
-            CairoSetColor(cairo, rule ? MkRgb(0x5f, 0x4b, 0x32) : textColor);
-            cairo_set_line_width(cairo, rule ? 2 : 1);
-            cairo_move_to(cairo, bbox.x, y);
-            cairo_line_to(cairo, bbox.x + bbox.dx, y);
-            cairo_stroke(cairo);
-        } else if (DrawInstrType::Image == i.type) {
-            CairoDrawImage(cairo, i.GetImage(), bbox);
-        } else if ((DrawInstrType::String == i.type || DrawInstrType::RtlString == i.type) && showBbox) {
-            CairoSetColor(cairo, kColRed);
-            cairo_set_line_width(cairo, 1);
-            cairo_rectangle(cairo, bbox.x, bbox.y, bbox.dx, bbox.dy);
-            cairo_stroke(cairo);
-        }
-        if (abortCookie && *abortCookie) {
-            break;
-        }
-    }
-}
 #endif
 
 #if OS_DARWIN
-static void CoreGraphicsSetColor(CGContextRef context, Color color) {
+using HtmlDrawContext = CGContextRef;
+
+static void HtmlSetColor(CGContextRef context, Color color) {
     u8 r = 0;
     u8 g = 0;
     u8 b = 0;
@@ -1540,7 +1490,7 @@ static void CoreGraphicsSetColor(CGContextRef context, Color color) {
     CGContextSetRGBStrokeColor(context, r / 255.0, g / 255.0, b / 255.0, 1);
 }
 
-static void CoreGraphicsDrawImage(CGContextRef context, Str data, RectF bbox) {
+static void HtmlDrawImage(CGContextRef context, Str data, RectF bbox) {
     Pixmap* decoded = PixmapFromData(data);
     Pixmap* pixmap = PixmapForHtml(decoded);
     FreePixmap(decoded);
@@ -1567,7 +1517,10 @@ static void CoreGraphicsDrawImage(CGContextRef context, Str data, RectF bbox) {
     FreePixmap(pixmap);
 }
 
-void DrawHtmlPage(CGContextRef context, PlatformTextRender* textDraw, Vec<DrawInstr>* drawInstructions, float offX,
+#endif
+
+#if OS_LINUX || OS_DARWIN
+void DrawHtmlPage(HtmlDrawContext context, PlatformTextRender* textDraw, Vec<DrawInstr>* drawInstructions, float offX,
                   float offY, bool showBbox, Color textColor, bool* abortCookie) {
     DrawHtmlText(textDraw, drawInstructions, offX, offY, textColor, abortCookie);
 
@@ -1577,17 +1530,30 @@ void DrawHtmlPage(CGContextRef context, PlatformTextRender* textDraw, Vec<DrawIn
         if (DrawInstrType::Line == i.type || DrawInstrType::LinkStart == i.type) {
             bool rule = DrawInstrType::Line == i.type;
             float y = floorf(bbox.y + (rule ? bbox.dy / 2.f : bbox.dy) + 0.5f);
-            CoreGraphicsSetColor(context, rule ? MkRgb(0x5f, 0x4b, 0x32) : textColor);
+            HtmlSetColor(context, rule ? MkRgb(0x5f, 0x4b, 0x32) : textColor);
+#if OS_LINUX
+            cairo_set_line_width(context, rule ? 2 : 1);
+            cairo_move_to(context, bbox.x, y);
+            cairo_line_to(context, bbox.x + bbox.dx, y);
+            cairo_stroke(context);
+#else
             CGContextSetLineWidth(context, rule ? 2 : 1);
             CGContextMoveToPoint(context, bbox.x, y);
             CGContextAddLineToPoint(context, bbox.x + bbox.dx, y);
             CGContextStrokePath(context);
+#endif
         } else if (DrawInstrType::Image == i.type) {
-            CoreGraphicsDrawImage(context, i.GetImage(), bbox);
+            HtmlDrawImage(context, i.GetImage(), bbox);
         } else if ((DrawInstrType::String == i.type || DrawInstrType::RtlString == i.type) && showBbox) {
-            CoreGraphicsSetColor(context, kColRed);
+            HtmlSetColor(context, kColRed);
+#if OS_LINUX
+            cairo_set_line_width(context, 1);
+            cairo_rectangle(context, bbox.x, bbox.y, bbox.dx, bbox.dy);
+            cairo_stroke(context);
+#else
             CGContextSetLineWidth(context, 1);
             CGContextStrokeRect(context, CGRectMake(bbox.x, bbox.y, bbox.dx, bbox.dy));
+#endif
         }
         if (abortCookie && *abortCookie) {
             break;

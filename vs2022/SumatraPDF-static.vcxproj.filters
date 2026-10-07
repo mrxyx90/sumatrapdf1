@@ -249,9 +249,6 @@
     <ClInclude Include="..\src\OverlayScrollbar.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\PageRenderService.h">
-      <Filter>src</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\PageThumbnails.h">
       <Filter>src</Filter>
     </ClInclude>
@@ -372,9 +369,6 @@
     <ClInclude Include="..\src\base\tests\UtAssert.h">
       <Filter>src\base\tests</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\gui\DocumentView.h">
-      <Filter>src\gui</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\gui\Gfx.h">
       <Filter>src\gui</Filter>
     </ClInclude>
@@ -385,9 +379,6 @@
       <Filter>src\gui</Filter>
     </ClInclude>
     <ClInclude Include="..\src\gui\PasswordDialog.h">
-      <Filter>src\gui</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\gui\PlatformCanvas.h">
       <Filter>src\gui</Filter>
     </ClInclude>
     <ClInclude Include="..\src\gui\PlatformText.h">
@@ -507,9 +498,6 @@
     <ClInclude Include="..\src\shared\PagePosition.h">
       <Filter>src\shared</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\shared\PageRenderPolicy.h">
-      <Filter>src\shared</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\shared\PalmDbReader.h">
       <Filter>src\shared</Filter>
     </ClInclude>
@@ -532,9 +520,6 @@
       <Filter>src\shared</Filter>
     </ClInclude>
     <ClInclude Include="..\src\shared\ProgressUpdateUI.h">
-      <Filter>src\shared</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\shared\ReaderModel.h">
       <Filter>src\shared</Filter>
     </ClInclude>
     <ClInclude Include="..\src\shared\SelectionHandlers.h">
@@ -831,9 +816,6 @@
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\src\PageGridDialog.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\PageRenderService.cpp">
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\src\PageThumbnails.cpp">
@@ -1223,9 +1205,6 @@
     <ClCompile Include="..\src\shared\PagePosition.cpp">
       <Filter>src\shared</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\shared\PageRenderPolicy.cpp">
-      <Filter>src\shared</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\shared\PalmDbReader.cpp">
       <Filter>src\shared</Filter>
     </ClCompile>
@@ -1248,9 +1227,6 @@
       <Filter>src\shared</Filter>
     </ClCompile>
     <ClCompile Include="..\src\shared\PngOptimizer.cpp">
-      <Filter>src\shared</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\shared\ReaderModel.cpp">
       <Filter>src\shared</Filter>
     </ClCompile>
     <ClCompile Include="..\src\shared\RefHoverDetect.cpp">
@@ -1308,9 +1284,6 @@
       <Filter>src\shared\tests</Filter>
     </ClCompile>
     <ClCompile Include="..\src\shared\tests\PagePosition_ut.cpp">
-      <Filter>src\shared\tests</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\shared\tests\PageRenderPolicy_ut.cpp">
       <Filter>src\shared\tests</Filter>
     </ClCompile>
     <ClCompile Include="..\src\shared\tests\ReadAloudHighlight_ut.cpp">

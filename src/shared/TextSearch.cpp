@@ -72,11 +72,6 @@ int TextSearch::GetCurrentPageNo() const {
     return findPage;
 }
 
-// note: the result might not be a valid page number!
-int TextSearch::GetSearchHitStartPageNo() const {
-    return searchHitStartAt;
-}
-
 void TextSearch::SetText(Str text) {
     // Single leading/trailing spaces request word boundaries; whole-word mode
     // requests both. Strip one space from each end for matching.
@@ -157,40 +152,27 @@ bool TextSearch::PageAllowed(int pageNo) const {
     if (pageNo < 1 || pageNo > nPages) {
         return false;
     }
-    if (len(pageAllowed) == 0) {
-        return true;
+    return len(pageAllowed) == 0 || (pageNo <= len(pageAllowed) && pageAllowed[pageNo - 1]);
+}
+
+int TextSearch::RestrictPage(Direction direction) const {
+    bool first = direction == Direction::Forward;
+    int n = std::min(len(pageAllowed), nPages);
+    for (int i = 0; i < n; i++) {
+        int idx = first ? i : n - i - 1;
+        if (pageAllowed[idx]) {
+            return idx + 1;
+        }
     }
-    if (pageNo > len(pageAllowed)) {
-        return false;
-    }
-    return pageAllowed[pageNo - 1];
+    return first ? 1 : nPages;
 }
 
 int TextSearch::RestrictFirst() const {
-    if (len(pageAllowed) == 0) {
-        return 1;
-    }
-    int n = std::min(len(pageAllowed), nPages);
-    for (int i = 0; i < n; i++) {
-        if (pageAllowed[i]) {
-            return i + 1;
-        }
-    }
-    return 1;
+    return RestrictPage(Direction::Forward);
 }
 
 int TextSearch::RestrictLast() const {
-    if (len(pageAllowed) == 0) {
-        return nPages;
-    }
-    int last = 0;
-    int n = std::min(len(pageAllowed), nPages);
-    for (int i = 0; i < n; i++) {
-        if (pageAllowed[i]) {
-            last = i + 1;
-        }
-    }
-    return last > 0 ? last : nPages;
+    return RestrictPage(Direction::Backward);
 }
 
 void TextSearch::SetAllowedPages(const Vec<bool>& allowed) {
@@ -221,7 +203,6 @@ void TextSearch::SetLastResult(TextSelection* sel) {
     selection.len -= str::NormalizeWSInPlace(selection);
     SetText(selection);
 
-    searchHitStartAt = findPage = std::min(startPage, endPage);
     findPage = std::max(startPage, endPage);
     findIndex = (findPage == endPage ? endGlyph : startGlyph);
     pageText = engine->GetTextForPage(findPage, &pageTextLen);
@@ -316,6 +297,11 @@ int TextSearch::FindAnchor() const {
     return result;
 }
 
+static bool InsideWordAtByte(Str text, int byteIdx) {
+    int prevIdx = byteIdx;
+    return isWordChar(Utf8CodepointPrev(text, prevIdx)) && isWordChar(Utf8CodepointAtByte(text, byteIdx));
+}
+
 // try to match "findText" from "start" with whitespace tolerance
 // (ignore all whitespace except after alphanumeric characters)
 TextSearch::PageAndOffset TextSearch::MatchEnd(int startOff) const {
@@ -323,7 +309,6 @@ TextSearch::PageAndOffset TextSearch::MatchEnd(int startOff) const {
     int currentPage = findPage;
     Str currentPageText = pageText;
     int currentPageTextLen = pageTextLen;
-    bool lookingAtWs;
 
     if (len(findText) == 0) {
         return notFound;
@@ -334,14 +319,8 @@ TextSearch::PageAndOffset TextSearch::MatchEnd(int startOff) const {
     int endIdx = startOff;
     int endByteIdx = Utf8CodepointToByteIndex(currentPageText, endIdx);
 
-    if (matchWordStart && startOff > 0) {
-        int prevByteIdx = endByteIdx;
-        int prevCh = Utf8CodepointPrev(pageText, prevByteIdx);
-        int nextByteIdx = endByteIdx;
-        int curCh = Utf8CodepointNext(pageText, nextByteIdx);
-        if (isWordChar(prevCh) && isWordChar(curCh)) {
-            return notFound;
-        }
+    if (matchWordStart && startOff > 0 && InsideWordAtByte(pageText, endByteIdx)) {
+        return notFound;
     }
 
     auto nextPage = [&]() {
@@ -364,13 +343,11 @@ TextSearch::PageAndOffset TextSearch::MatchEnd(int startOff) const {
         }
         int endNextByteIdx = endByteIdx;
         int endCh = atPageEnd ? 0 : Utf8CodepointNext(currentPageText, endNextByteIdx);
-        /* Going from page n to page n+1 is a space, too.*/
-        lookingAtWs = (atPageEnd && (currentPage < nPages)) || str::IsWs((char)endCh);
+        // Page boundaries count as whitespace.
+        bool lookingAtWs = atPageEnd || str::IsWs((char)endCh);
         bool isMatch = false;
-        // extra advance for the German ß <-> ss equivalence, where one side
-        // consumes one codepoint and the other two (issue #933)
-        int extraMatchAdv = 0;
-        int extraEndAdv = 0;
+        int matchAdv = 1;
+        int endAdv = 1;
         int matchNextByteIdx = matchByteIdx;
         int matchCh = Utf8CodepointNext(findText, matchNextByteIdx);
         if (matchCase) {
@@ -382,8 +359,8 @@ TextSearch::PageAndOffset TextSearch::MatchEnd(int startOff) const {
                 isMatch = MatchSearchUnit(currentPageText, currentPageTextLen, endIdx, endByteIdx, findText,
                                           findTextLen, matchIdx, matchByteIdx, hAdv, nAdv, hByteAdv, nByteAdv);
                 if (isMatch) {
-                    extraEndAdv = hAdv - 1;
-                    extraMatchAdv = nAdv - 1;
+                    endAdv = hAdv;
+                    matchAdv = nAdv;
                     endNextByteIdx = endByteIdx + hByteAdv;
                     matchNextByteIdx = matchByteIdx + nByteAdv;
                 }
@@ -397,12 +374,9 @@ TextSearch::PageAndOffset TextSearch::MatchEnd(int startOff) const {
         if (!isMatch && !sameWhitespace && !samePunctuation) {
             return notFound;
         }
-        // consume the extra char on whichever side of a ß <-> ss match is longer
-        int matchAdv = 1 + extraMatchAdv;
         matchByteIdx = matchNextByteIdx;
         matchIdx += matchAdv;
         if (!atPageEnd && endCh) {
-            int endAdv = 1 + extraEndAdv;
             endByteIdx = endNextByteIdx;
             endIdx += endAdv;
         } else if (!nextPage()) {
@@ -426,14 +400,8 @@ TextSearch::PageAndOffset TextSearch::MatchEnd(int startOff) const {
             }
         }
     }
-    if (matchWordEnd && endIdx > 0 && endIdx < currentPageTextLen) {
-        int prevByteIdx = endByteIdx;
-        int prevCh = Utf8CodepointPrev(currentPageText, prevByteIdx);
-        int nextByteIdx = endByteIdx;
-        int curCh = Utf8CodepointNext(currentPageText, nextByteIdx);
-        if (isWordChar(prevCh) && isWordChar(curCh)) {
-            return notFound;
-        }
+    if (matchWordEnd && endIdx > 0 && endIdx < currentPageTextLen && InsideWordAtByte(currentPageText, endByteIdx)) {
+        return notFound;
     }
 
     return {currentPage, endIdx};
@@ -470,7 +438,6 @@ bool TextSearch::FindTextInPage(int pageNo, TextSearch::PageAndOffset* finalGlyp
             continue;
         }
 
-        searchHitStartAt = pageNo;
         StartAt(pageNo, found);
         SelectUpTo(fg.page, fg.offset);
         findIndex = forward ? fg.offset : found;
@@ -495,12 +462,8 @@ void TextSearch::EnsureFullyLaidOut() {
     if (newPages == nPages) {
         return;
     }
-    int oldPages = nPages;
     nPages = newPages;
     VecResize(pagesToSkip, nPages);
-    for (int i = oldPages; i < nPages; i++) {
-        pagesToSkip[i] = false;
-    }
 }
 
 bool TextSearch::FindStartingAtPage(int pageNo) {
@@ -542,7 +505,7 @@ bool TextSearch::FindStartingAtPage(int pageNo) {
     }
 
     // allow for the first/last page of the (restricted) range to be included next
-    searchHitStartAt = findPage = forward ? hi + 1 : lo - 1;
+    findPage = forward ? hi + 1 : lo - 1;
 
     return false;
 }

@@ -50,16 +50,16 @@ void FileHistoryClear(bool keepFavorites) {
         return;
     }
     HomePageInvalidateLayoutCache();
-    Vec<FileState*> keep;
+    int kept = 0;
     for (FileState* fs : *gStates) {
         if (keepFavorites && len(*fs->favorites) > 0) {
             fs->openCount = 0;
-            VecAppend(keep, fs);
+            (*gStates)[kept++] = fs;
             continue;
         }
         DeleteFileState(fs);
     }
-    *gStates = keep;
+    VecResize(*gStates, kept);
 }
 
 FileState* FileHistoryGet(int index) {
@@ -239,11 +239,8 @@ void CleanUpThumbnailCache() {
         return;
     }
     for (FileState* fs : *gStates) {
-        if (!fs || !fs->isMissing || len(fs->filePath) == 0) {
-            continue;
-        }
-        // Keep pinned entries' thumbs; they still show on the home page.
-        if (fs->isPinned) {
+        // Pinned missing entries still appear on the home page.
+        if (!fs || !fs->isMissing || len(fs->filePath) == 0 || fs->isPinned) {
             continue;
         }
         logf("CleanUpThumbnailCache: deleting thumb for missing '%s'\n", fs->filePath);

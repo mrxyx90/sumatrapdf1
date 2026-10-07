@@ -27,18 +27,17 @@ static uint GuessTextCodepage(Str, uint defVal) {
 }
 #endif
 
-template <typename T>
-static T* LoadEbook(Str path) {
+template <typename T, typename... Args>
+static T* LoadEbook(Str path, Args... args) {
     auto* doc = new T(path);
-    if (doc && doc->Load()) {
+    if (doc && doc->Load(args...)) {
         return doc;
     }
     delete doc;
     return nullptr;
 }
 
-static Str TakeArchiveData(Archive* archive, int fileId) {
-    auto* fi = archive->GetFileDataById(fileId);
+static Str TakeArchiveData(Archive::FileInfo* fi) {
     if (!fi || !fi->data) {
         return {};
     }
@@ -47,7 +46,7 @@ static Str TakeArchiveData(Archive* archive, int fileId) {
     return res;
 }
 
-static TempStr GetXmlPIAttrTemp(Str xmlPI, Str attrName) {
+static Str GetXmlPIAttr(Str xmlPI, Str attrName) {
     Str rest(xmlPI.s + 2, len(xmlPI) - 2);
     str::TrimNonWs(rest);
     while (len(rest) > 0) {
@@ -82,7 +81,7 @@ static TempStr GetXmlPIAttrTemp(Str xmlPI, Str attrName) {
             val = str::NextWord(rest);
         }
         if (str::EqI(name, attrName)) {
-            return str::DupTemp(val);
+            return val;
         }
     }
     return {};
@@ -98,10 +97,7 @@ static uint GetCodepageFromPI(Str xmlPI) {
     if (xmlPIEnd < 0) {
         return CP_ACP;
     }
-    TempStr encoding = GetXmlPIAttrTemp(Str(xmlPI.s, xmlPIEnd + 2), StrL("encoding"));
-    if (len(encoding) == 0) {
-        return CP_ACP;
-    }
+    Str encoding = GetXmlPIAttr(Str(xmlPI.s, xmlPIEnd + 2), StrL("encoding"));
 
     struct {
         Str namePart;
@@ -218,17 +214,15 @@ static TempStr Base64DecodeTemp(Str data) {
     static const Str digits = StrL("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/");
     constexpr int kDigitBits = 6;
     constexpr int kByteBits = 8;
-    int sLen = len(data);
-    char* s = data.s;
-    char* end = data.s + sLen;
-    char* result = AllocArrayTemp<char>(sLen * 3 / 4);
-    char* curr = result;
+    char* result = AllocArrayTemp<char>(len(data) * 3 / 4);
+    int count = 0;
     u32 value = 0;
     int bits = 0;
-    for (; s < end && *s != '='; s++) {
-        int n = str::IndexOfChar(digits, *s);
+    for (int i = 0; i < len(data) && data.s[i] != '='; i++) {
+        char c = data.s[i];
+        int n = str::IndexOfChar(digits, c);
         if (-1 == n) {
-            if (str::IsWs(*s)) {
+            if (str::IsWs(c)) {
                 continue;
             }
             return {};
@@ -237,10 +231,10 @@ static TempStr Base64DecodeTemp(Str data) {
         bits += kDigitBits;
         if (bits >= kByteBits) {
             bits -= kByteBits;
-            *curr++ = (char)(value >> bits);
+            result[count++] = (char)(value >> bits);
         }
     }
-    return Str(result, (int)(curr - result));
+    return Str(result, count);
 }
 
 static TempStr DecodeDataURITemp(Str url) {
@@ -264,8 +258,7 @@ void FreeImages(Vec<ImageData>& images) {
 
 /* ********** EPUB ********** */
 
-EpubDoc::EpubDoc(Str fileName) {
-    str::ReplaceWithCopy(&this->fileName, fileName);
+EpubDoc::EpubDoc(Str fileName) : fileName(str::Dup(fileName)) {
     archive = OpenArchiveFromFile(fileName, /*eagerLoad=*/true, gArchiveProgressCb);
 }
 
@@ -299,9 +292,6 @@ static void CollectEncryptedEpubPaths(const GumboNode* root, StrVec& encList) {
     VecAppend(toVisit, root);
     while (len(toVisit) > 0) {
         const GumboNode* node = VecPop(toVisit);
-        if (!node) {
-            continue;
-        }
         if (GumboTagNameIs(node, StrL("CipherReference"), HtmlNameMatch::Local)) {
             TempStr uri = GumboAttributeValueTemp(node, "URI");
             if (uri) {
@@ -356,11 +346,7 @@ bool EpubDoc::Load() {
     Str content(contentFi->data, contentFi->fileSizeUncompressed);
     ParseMetadata(content, props);
     GumboDoc contentDoc(content, GumboMode::XmlFragment);
-    const GumboNode* node = contentDoc.Document();
-    if (!node) {
-        return false;
-    }
-    node = GumboFindDescendantByTag(node, StrL("manifest"), HtmlNameMatch::Local);
+    const GumboNode* node = GumboFindDescendantByTag(contentDoc.Document(), StrL("manifest"), HtmlNameMatch::Local);
     if (!node) {
         return false;
     }
@@ -369,8 +355,7 @@ bool EpubDoc::Load() {
 
     StrVec idList, pathList;
 
-    const GumboNode* manifest = node;
-    const GumboVector* manifestChildren = GumboChildrenOf(manifest);
+    const GumboVector* manifestChildren = GumboChildrenOf(node);
     for (unsigned int i = 0; manifestChildren && i < manifestChildren->length; i++) {
         node = (const GumboNode*)manifestChildren->data[i];
         if (!node || node->type != GUMBO_NODE_ELEMENT) {
@@ -433,8 +418,7 @@ bool EpubDoc::Load() {
         isRtlDoc = readingDir.rtl;
     }
 
-    const GumboNode* spine = node;
-    const GumboVector* spineChildren = GumboChildrenOf(spine);
+    const GumboVector* spineChildren = GumboChildrenOf(node);
     for (unsigned int i = 0; spineChildren && i < spineChildren->length; i++) {
         node = (const GumboNode*)spineChildren->data[i];
         if (!GumboTagNameIs(node, StrL("itemref"), HtmlNameMatch::Local)) {
@@ -549,7 +533,7 @@ Str EpubDoc::GetImageData(Str fileName, Str pagePath) {
             continue;
         }
         if (len(img.base) == 0) {
-            img.base = TakeArchiveData(archive, img.fileId);
+            img.base = TakeArchiveData(archive->GetFileDataById(img.fileId));
         }
         if (len(img.base) > 0) {
             return img.base;
@@ -562,7 +546,7 @@ Str EpubDoc::GetImageData(Str fileName, Str pagePath) {
     // Images need not be registered in the manifest.
     ImageData data;
     data.fileId = archive->GetFileId(url);
-    data.base = TakeArchiveData(archive, data.fileId);
+    data.base = TakeArchiveData(archive->GetFileDataById(data.fileId));
     if (!data.base.s) {
         return {};
     }
@@ -579,7 +563,7 @@ Str EpubDoc::GetFileData(Str relPath, Str pagePath) {
 
     ScopedMutex scope(&zipAccess);
     TempStr url = NormalizeURLTemp(relPath, pagePath);
-    return TakeArchiveData(archive, archive->GetFileId(url));
+    return TakeArchiveData(archive->GetFileDataByName(url));
 }
 
 static bool ParseNavToc(Str data, Str pagePath, EbookTocVisitor* visitor) {
@@ -782,8 +766,7 @@ Str EpubCoverImageData(Str path) {
         return {};
     }
     TempStr imgPath = NormalizeURLTemp(url::DecodeTemp(href), contentPath);
-    auto* imgFi = archive->GetFileDataByName(imgPath);
-    return imgFi && imgFi->data ? str::Dup(Str(imgFi->data, imgFi->fileSizeUncompressed)) : Str{};
+    return TakeArchiveData(archive->GetFileDataByName(imgPath));
 }
 
 /* ********** FictionBook (FB2) ********** */
@@ -805,14 +788,14 @@ static Str ReadFb2Archive(Fb2Doc* doc, Archive* archive) {
         return {};
     }
     if (len(fileInfos) == 1) {
-        return TakeArchiveData(archive, 0);
+        return TakeArchiveData(archive->GetFileDataById(0));
     }
 
     // Multi-entry archives contain one FB2 and optional URL shortcuts.
     Str data;
     for (auto* info : fileInfos) {
         if (str::EndsWithI(info->name, StrL(".fb2")) && len(data) == 0) {
-            data = TakeArchiveData(archive, info->fileId);
+            data = TakeArchiveData(archive->GetFileDataById(info->fileId));
         } else if (!str::EndsWithI(info->name, StrL(".url"))) {
             str::Free(data);
             return {};
@@ -1060,19 +1043,12 @@ Fb2Doc* Fb2Doc::CreateFromFile(Str path) {
 }
 
 Fb2Doc* Fb2Doc::CreateFromData(Str data) {
-    Fb2Doc* doc = new Fb2Doc(Str());
-    if (!doc || !doc->Load(data)) {
-        delete doc;
-        return {};
-    }
-    return doc;
+    return LoadEbook<Fb2Doc>({}, data);
 }
 
 /* ********** PalmDOC (and TealDoc) ********** */
 
-PalmDoc::PalmDoc(Str path) {
-    this->fileName = str::Dup(path);
-}
+PalmDoc::PalmDoc(Str path) : fileName(str::Dup(path)) {}
 
 PalmDoc::~PalmDoc() {
     str::Free(fileName);
@@ -1116,12 +1092,7 @@ static Str HandleTealDocTag(str::Builder& builder, StrVec& tocEntries, Str text)
         AttrInfo attr = tok->GetAttrByName(StrL("FONT"));
         if (attr && attr.val) {
             char font = attr.val.s[0];
-            hx = 3;
-            if (font == '0') {
-                hx = 5;
-            } else if (font == '2') {
-                hx = 1;
-            }
+            hx = font == '0' ? 5 : font == '2' ? 1 : 3;
         }
         attr = tok->GetAttrByName(StrL("TEXT"));
         if (!attr) {
@@ -1319,7 +1290,7 @@ bool EbookDoc_UnitTestLoading() {
         {StrL("<?xml?>"), {}},
     };
     for (const auto& c : declarations) {
-        if (!str::Eq(GetXmlPIAttrTemp(c[0], StrL("encoding")), c[1])) {
+        if (!str::Eq(GetXmlPIAttr(c[0], StrL("encoding")), c[1])) {
             return false;
         }
     }

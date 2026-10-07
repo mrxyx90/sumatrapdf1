@@ -7,8 +7,6 @@
 #include "DisplayMode.h"
 #include "DocumentLayout.h"
 
-constexpr int kDocumentLayoutInvalidPageNo = -1;
-
 static bool PageIsSpread(const Vec<u8>& flags, int pageNo) {
     int i = pageNo - 1;
     if (i < 0 || i >= len(flags)) {
@@ -24,13 +22,10 @@ void CollectFacingRows(Vec<FacingRow>& out, int pageCount, bool bookView, const 
         return;
     }
     int page = 1;
-    if (bookView) {
-        VecAppend(out, {1, 1, PageIsSpread(spreadFlags, 1)});
-        page = 2;
-    }
     while (page <= pageCount) {
         FacingRow row{page, page, PageIsSpread(spreadFlags, page)};
-        if (!row.isSpread && page + 1 <= pageCount && !PageIsSpread(spreadFlags, page + 1)) {
+        if (!(bookView && page == 1) && !row.isSpread && page + 1 <= pageCount &&
+            !PageIsSpread(spreadFlags, page + 1)) {
             row.lastPage++;
         }
         VecAppend(out, row);
@@ -59,13 +54,6 @@ void DocumentLayout::Reset(int pageCount) {
 
 bool DocumentLayout::ValidPageNo(int pageNo) const {
     return pageNo >= 1 && pageNo <= pages.len;
-}
-
-void DocumentLayout::SetPageMediaBox(int pageNo, RectF mediaBox) {
-    if (!ValidPageNo(pageNo)) {
-        return;
-    }
-    pages[pageNo - 1].mediaBox = mediaBox;
 }
 
 DocumentLayoutPage* DocumentLayout::GetPage(int pageNo) {
@@ -322,9 +310,7 @@ static void RelayoutRows(DocumentLayout& layout, bool isFitContent) {
             DocumentLayoutPage* page = layout.GetPage(pageNo);
             if (single || row.isSpread || (cover && !IsContinuous(params.displayMode))) {
                 page->pos.x = pageOffX + ((pagesDx - page->pos.dx) / 2);
-            } else if (cover) {
-                page->pos.x = pageOffX + columnMaxWidth[0] + params.pageSpacing.dx;
-            } else if (pageNo == row.firstPage) {
+            } else if (!cover && pageNo == row.firstPage) {
                 page->pos.x = pageOffX + columnMaxWidth[0] - page->pos.dx;
             } else {
                 page->pos.x = pageOffX + (columnMaxWidth[0] + params.pageSpacing.dx);
@@ -377,49 +363,4 @@ void DocumentLayout::RecalcVisibleParts() {
         page.pageOnScreen = pageRect;
         page.pageOnScreen.Offset(-viewPort.x, -viewPort.y);
     }
-}
-
-int DocumentLayout::CurrentPageNo() const {
-    if (!IsContinuous(params.displayMode)) {
-        return params.startPage;
-    }
-    int mostVisiblePage = 1;
-    float ratio = 0;
-    for (int pageNo = 1; pageNo <= pages.len; pageNo++) {
-        const DocumentLayoutPage* page = GetPage(pageNo);
-        if (page->visibleRatio > ratio) {
-            mostVisiblePage = pageNo;
-            ratio = page->visibleRatio;
-        }
-    }
-    if (ratio <= 0 && pages.len > 0) {
-        // Horizontal scrolling may miss centered, narrow pages; choose by vertical band.
-        mostVisiblePage = PageNoAtViewPortTop();
-    }
-    return mostVisiblePage;
-}
-
-// the page whose vertical band contains the top of the viewport (the last page
-// when the viewport is past the end); ignores horizontal position
-int DocumentLayout::PageNoAtViewPortTop() const {
-    if (pages.len <= 0) {
-        return 1;
-    }
-    for (int pageNo = 1; pageNo <= pages.len; pageNo++) {
-        const DocumentLayoutPage* page = GetPage(pageNo);
-        if (page && viewPort.y < page->pos.y + page->pos.dy) {
-            return pageNo;
-        }
-    }
-    return pages.len;
-}
-
-int DocumentLayout::FirstVisiblePageNo() const {
-    for (int pageNo = 1; pageNo <= pages.len; pageNo++) {
-        const DocumentLayoutPage* page = GetPage(pageNo);
-        if (page->visibleRatio > 0) {
-            return pageNo;
-        }
-    }
-    return kDocumentLayoutInvalidPageNo;
 }

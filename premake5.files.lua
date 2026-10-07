@@ -322,9 +322,6 @@ function sumatrapdf_files()
     "DisplayMode.*",
     "DisplayModel.*",
     "DocumentLayout.*",
-    "PageRenderPolicy.*",
-    "PageRenderService.*",
-    "ReaderModel.*",
     "DocController.*",
     "DocProperties.*",
     "EditAnnotations.*",
@@ -540,7 +537,6 @@ end
 
 function gui_files()
   files_in_dir("src/gui", {
-    "DocumentView.h",
     "Gfx.h",
     "Gfx.cpp",
     "GfxGdiplus.cpp",
@@ -549,7 +545,6 @@ function gui_files()
     "Layout.*",
     "PasswordDialog.*",
     "PlatformFont.*",
-    "PlatformCanvas.h",
     "PlatformText.*",
     "PlatformWindow.h",
     "UIModels.*",

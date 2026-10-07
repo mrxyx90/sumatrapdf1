@@ -23,7 +23,6 @@ struct TextSearch : public TextSelection {
     Vec<TextSel>* FindNext();
 
     int GetCurrentPageNo() const;
-    int GetSearchHitStartPageNo() const;
 
     ProgressUpdateCb progressCb;
 
@@ -38,7 +37,6 @@ struct TextSearch : public TextSelection {
     int findTextLen = 0;
     int anchorLen = 0;
     int findPage = 0;
-    int searchHitStartAt = 0; // when text found spans several pages, searchHitStartAt < findPage
     bool forward = true;
     bool matchCase = false;
     // when set, the search only matches complete words: it forces both
@@ -72,6 +70,7 @@ struct TextSearch : public TextSelection {
 
   private:
     int FindAnchor() const;
+    int RestrictPage(Direction direction) const;
 
     enum class PageSearchResult {
         Canceled,

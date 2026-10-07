@@ -265,13 +265,7 @@ bool HuffDicDecompressor::SetHuffData(u8* huffData, int huffDataLen) {
 }
 
 bool HuffDicDecompressor::AddCdicData(u8* cdicData, u32 cdicDataLen) {
-    if (dictsCount >= kCdicsMax) {
-        return false;
-    }
-    if (cdicDataLen < kCdicHeaderLen) {
-        return false;
-    }
-    if (!str::EqN(StrL("CDIC"), Str((char*)cdicData, 4), 4)) {
+    if (dictsCount >= kCdicsMax || cdicDataLen < kCdicHeaderLen || !MemEq(cdicData, "CDIC", LenL("CDIC"))) {
         return false;
     }
     u32 hdrLen = UInt32BE(cdicData + 4);
@@ -341,10 +335,7 @@ static bool IsValidCompression(int comprType) {
     return (kCompressionNone == comprType) || (kCompressionPalm == comprType) || (kCompressionHuff == comprType);
 }
 
-MobiDoc::MobiDoc(Str filePath) {
-    docTocIndex = -1;
-    str::ReplaceWithCopy(&fileName, filePath);
-}
+MobiDoc::MobiDoc(Str filePath) : fileName(str::Dup(filePath)) {}
 
 MobiDoc::~MobiDoc() {
     FreeProps(props);
@@ -591,10 +582,7 @@ Str MobiDoc::GetCoverImage() {
         return {};
     }
     int imageNo = coverImageRec - imageFirstRec;
-    if (imageNo >= len(images) || len(images[imageNo]) == 0) {
-        return {};
-    }
-    return images[imageNo];
+    return imageNo >= len(images) ? Str{} : GetImage(imageNo + 1);
 }
 
 // each record can have extra data at the end, which we must discard
@@ -649,17 +637,11 @@ bool MobiDoc::LoadDocRecordIntoBuffer(int recNo, str::Builder& strOut) {
         strOut.Append(Str((char*)recData, recSize));
         return true;
     }
-    if (kCompressionPalm == compressionType) {
-        bool ok = PalmdocUncompress(recData, recSize, strOut);
+    if (kCompressionPalm == compressionType || (kCompressionHuff == compressionType && huffDic)) {
+        bool palm = kCompressionPalm == compressionType;
+        bool ok = palm ? PalmdocUncompress(recData, recSize, strOut) : huffDic->Decompress(recData, recSize, strOut);
         if (!ok) {
-            logf("PalmDoc decompression failed\n");
-        }
-        return ok;
-    }
-    if (kCompressionHuff == compressionType && huffDic) {
-        bool ok = huffDic->Decompress(recData, recSize, strOut);
-        if (!ok) {
-            logf("HuffDic decompression failed\n");
+            logf("%s decompression failed\n", palm ? StrL("PalmDoc") : StrL("HuffDic"));
         }
         return ok;
     }
@@ -1107,9 +1089,7 @@ static Str ExtractPdfFromPrintReplica(PdbReader* pdb) {
         DecodeMobiDocHeader((const u8*)rec0.s + kPalmDocHeaderLen, rec0.len - kPalmDocHeaderLen, &mobi);
         if (str::EqN(StrL("MOBI"), Str(mobi.id, 4), 4)) {
             // MOBI type 8 is Print Replica (AZW4).
-            if (mobi.type == 8) {
-                isPrintReplica = true;
-            }
+            isPrintReplica = mobi.type == 8;
             // Print Replica version 4 can have a long header without record trailers.
             if (mobi.hdrLen >= kMobiExtraFlagsHeaderLen &&
                 mobi.minRequiredMobiFormatVersion >= kMobiTrailerMinVersion) {
@@ -1127,15 +1107,12 @@ static Str ExtractPdfFromPrintReplica(PdbReader* pdb) {
         return {};
     }
 
-    if (!IsValidCompression(palm.compressionType) || palm.compressionType == kCompressionHuff) {
+    if (palm.compressionType != kCompressionNone && palm.compressionType != kCompressionPalm) {
         logf("ExtractPdfFromPrintReplica: unsupported compression %d\n", (int)palm.compressionType);
         return {};
     }
 
-    int recCount = palm.recordsCount;
-    if (recCount >= pdb->GetRecordCount()) {
-        recCount = pdb->GetRecordCount() - 1;
-    }
+    int recCount = std::min((int)palm.recordsCount, pdb->GetRecordCount() - 1);
     if (recCount < 1) {
         return {};
     }
@@ -1160,11 +1137,9 @@ static Str ExtractPdfFromPrintReplica(PdbReader* pdb) {
         }
         if (kCompressionNone == palm.compressionType) {
             raw.Append(Str(rec.s, recSize));
-        } else if (kCompressionPalm == palm.compressionType) {
-            if (!PalmdocUncompress((const u8*)rec.s, recSize, raw)) {
-                logf("ExtractPdfFromPrintReplica: PalmDoc decompression failed\n");
-                return {};
-            }
+        } else if (!PalmdocUncompress((const u8*)rec.s, recSize, raw)) {
+            logf("ExtractPdfFromPrintReplica: PalmDoc decompression failed\n");
+            return {};
         }
     }
 
@@ -1198,25 +1173,10 @@ static bool FileMightBePrintReplica(Str path) {
     }
     u32 off0 = r.UInt32BE(78);
     u32 off1 = r.UInt32BE(86);
-    bool isType8 = false;
-    bool sawType = false;
-    if (n >= 28 && off0 <= (u32)(n - 28) && MemEq(buf + off0 + 16, "MOBI", 4)) {
-        sawType = true;
-        isType8 = r.UInt32BE((int)off0 + 24) == 8;
-    }
-    bool sawRec1 = false;
-    bool rec1Mop = false;
-    if (n >= 4 && off1 <= (u32)(n - 4)) {
-        sawRec1 = true;
-        rec1Mop = MemEq(buf + off1, "%MOP", 4);
-    }
-    if (isType8 || rec1Mop) {
+    if (off0 > (u32)(n - 28) || !MemEq(buf + off0 + 16, "MOBI", 4) || r.UInt32BE((int)off0 + 24) == 8) {
         return true;
     }
-    if (sawType && sawRec1) {
-        return false;
-    }
-    return true;
+    return off1 > (u32)(n - 4) || MemEq(buf + off1, "%MOP", 4);
 }
 
 Str ExtractPdfFromPrintReplicaFile(Str path) {

@@ -12,8 +12,7 @@
 
 #include "gui/PlatformFont.h"
 
-// root node of the intrusive list of interned fonts; only its `next` is used
-static PlatformFont gPlatformFonts;
+static PlatformFont* gPlatformFonts = nullptr;
 // fonts are asked for from background threads (ebook formatting), so the list
 // needs a lock. It is not re-entrant, so nothing called while holding it may
 // ask for a font
@@ -29,19 +28,13 @@ static int CalculateAverageCharWidth(PlatformFont* font) {
 }
 
 bool PlatformFont::SameAs(Str otherName, float otherSizePt, PlatformFontStyle otherStyle) const {
-    if (sizePt != otherSizePt) {
-        return false;
-    }
-    if (style != otherStyle) {
-        return false;
-    }
-    return str::Eq(name, otherName);
+    return sizePt == otherSizePt && style == otherStyle && str::Eq(name, otherName);
 }
 
 static PlatformFont* GetPlatformFontInternal(Str name, float sizePt, PlatformFontStyle style, uintptr_t nativeId) {
     ScopedMutex lock(&gPlatformFontsMutex);
 
-    for (PlatformFont* font = gPlatformFonts.next; font; font = font->next) {
+    for (PlatformFont* font = gPlatformFonts; font; font = font->next) {
         if (nativeId ? font->nativeId == nativeId : font->nativeId == 0 && font->SameAs(name, sizePt, style)) {
             return font;
         }
@@ -56,10 +49,10 @@ static PlatformFont* GetPlatformFontInternal(Str name, float sizePt, PlatformFon
     if (!PlatformFontCreateNative(font)) {
         // no font could be created: hand out the last one that worked, like
         // the gdiplus font cache used to
-        return gPlatformFonts.next;
+        return gPlatformFonts;
     }
     font->averageCharWidth = CalculateAverageCharWidth(font);
-    ListInsertFront(&gPlatformFonts.next, font);
+    ListInsertFront(&gPlatformFonts, font);
     return font;
 }
 
@@ -68,10 +61,6 @@ PlatformFont* GetPlatformFont(Str name, float sizePt, PlatformFontStyle style) {
 }
 
 #if OS_WIN
-PlatformFont* GetPlatformFontForNative(Str name, float sizePt, PlatformFontStyle style, uintptr_t nativeId) {
-    return GetPlatformFontInternal(name, sizePt, style, nativeId);
-}
-
 using Gdiplus::Font;
 using Gdiplus::Ok;
 using Gdiplus::Status;
@@ -118,6 +107,16 @@ static HFONT RememberCreatedFont(HFONT font, Str name, int size, u16 flags) {
     return font;
 }
 
+static PlatformFont* CreateGuiFont(LOGFONTW& lf, Str name, int size, u16 flags) {
+    if (flags & kFontFlagBold) {
+        lf.lfWeight = FW_BOLD;
+    }
+    if (flags & kFontFlagItalic) {
+        lf.lfItalic = TRUE;
+    }
+    return GetPlatformFont(RememberCreatedFont(CreateFontIndirectW(&lf), name, size, flags));
+}
+
 void DeleteCreatedFonts() {
     ListDelete(gFonts);
     gFonts = nullptr;
@@ -140,8 +139,7 @@ PlatformFont* HdcCreateSimpleFont(HDC hdc, Str fontName, int fontSizePt) {
     wstr::BufSet(WStr(lf.lfFaceName, dimof(lf.lfFaceName)), ToWStrTemp(fontName));
     lf.lfWeight = FW_DONTCARE;
     lf.lfClipPrecision = CLIP_DEFAULT_PRECIS;
-    HFONT res = CreateFontIndirectW(&lf);
-    return GetPlatformFont(RememberCreatedFont(res, fontName, realSize, flags));
+    return CreateGuiFont(lf, fontName, realSize, flags);
 }
 
 PlatformFont* GetUserGuiFont(Str fontName, int size) {
@@ -165,14 +163,7 @@ PlatformFont* GetUserGuiFontEx(Str fontName, int size, bool bold, bool italic) {
         wstr::BufSet(WStr(ncm.lfMessageFont.lfFaceName, dimof(ncm.lfMessageFont.lfFaceName)), ToWStrTemp(fontName));
     }
     ncm.lfMessageFont.lfHeight = -size;
-    if (bold) {
-        ncm.lfMessageFont.lfWeight = FW_BOLD;
-    }
-    if (italic) {
-        ncm.lfMessageFont.lfItalic = TRUE;
-    }
-    HFONT res = CreateFontIndirectW(&ncm.lfMessageFont);
-    return GetPlatformFont(RememberCreatedFont(res, fontName, size, flags));
+    return CreateGuiFont(ncm.lfMessageFont, fontName, size, flags);
 }
 
 PlatformFont* GetDefaultGuiFont(bool bold, bool italic) {
@@ -187,14 +178,7 @@ PlatformFont* GetDefaultGuiFont(bool bold, bool italic) {
     if (font) {
         return GetPlatformFont(font->font);
     }
-    if (bold) {
-        ncm.lfMessageFont.lfWeight = FW_BOLD;
-    }
-    if (italic) {
-        ncm.lfMessageFont.lfItalic = TRUE;
-    }
-    HFONT res = CreateFontIndirectW(&ncm.lfMessageFont);
-    return GetPlatformFont(RememberCreatedFont(res, Str(), size, flags));
+    return CreateGuiFont(ncm.lfMessageFont, Str(), size, flags);
 }
 
 PlatformFont* GetScaledPlatformFont(PlatformFont* font, int percent) {
@@ -339,7 +323,7 @@ PlatformFont* GetPlatformFont(HFONT hfont) {
     // points at 96 dpi, which is what the rest of the font cache is keyed on
     int dyPx = lf.lfHeight < 0 ? -lf.lfHeight : lf.lfHeight;
     float sizePt = (float)dyPx * 72.f / 96.f;
-    return GetPlatformFontForNative(ToUtf8Temp(WStr(lf.lfFaceName)), sizePt, style, (uintptr_t)hfont);
+    return GetPlatformFontInternal(ToUtf8Temp(WStr(lf.lfFaceName)), sizePt, style, (uintptr_t)hfont);
 }
 
 // derived from the font's own HFONT rather than from (name, size, Bold): an
